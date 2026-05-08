@@ -1,0 +1,37 @@
+spring:
+  flyway:
+    locations: classpath:db/migration
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+
+# ── Testcontainers ──────────────────────────────────────────────
+testcontainers:
+  reuse:
+    enable: true
+
+# ── Mail ────────────────────────────────────────────────────────
+app:
+  mail:
+    delivery-mode: log
+  admin:
+    email: admin@stickerswap.com
+    password: changeme
+  security:
+    issuer: http://localhost:8080
+    public-base-url: http://localhost:8080
+    password-reset-url: http://localhost:5173/password-reset
+    jwk-set-json: ""
+  oauth:
+    web-client:
+      client-id: sticker-swap-web
+      redirect-uris: http://localhost:5173/oauth/callback,http://localhost:3000/oauth/callback
+      post-logout-redirect-uris: http://localhost:5173,http://localhost:3000
+
+logging:
+  level:
+    br.com.stickerswap: DEBUG
+    org.springframework.security: WARN
+    org.testcontainers: INFO
+    com.github.dockerjava: WARN

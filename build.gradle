@@ -1,0 +1,101 @@
+import org.springframework.boot.gradle.plugin.SpringBootPlugin
+
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '4.0.4'
+    id 'com.google.cloud.tools.jib' version '3.5.3'
+}
+
+group = 'br.com.stickerswap'
+version = '0.0.1'
+description = 'Plataforma de troca de figurinhas'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(25)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+def testcontainersVersion = '1.21.4'
+
+dependencies {
+    // ── Spring Boot BOM (native Gradle platform) ───────────────
+    implementation platform(SpringBootPlugin.BOM_COORDINATES)
+    testImplementation platform(SpringBootPlugin.BOM_COORDINATES)
+    annotationProcessor platform(SpringBootPlugin.BOM_COORDINATES)
+    testAnnotationProcessor platform(SpringBootPlugin.BOM_COORDINATES)
+
+    // ── Spring Boot Starters ───────────────────────────────────
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.boot:spring-boot-starter-flyway'
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+    implementation 'org.springframework.boot:spring-boot-starter-security-oauth2-authorization-server'
+    implementation 'org.springframework.boot:spring-boot-starter-security-oauth2-resource-server'
+    implementation 'org.springframework.boot:spring-boot-starter-mail'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'org.springframework.boot:spring-boot-starter-webmvc'
+    implementation 'org.springframework.boot:spring-boot-starter-websocket'
+
+    // ── Flyway ─────────────────────────────────────────────────
+    implementation 'org.flywaydb:flyway-database-postgresql'
+
+    // ── OpenAPI / Swagger ──────────────────────────────────────
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.6'
+
+    // ── Database ───────────────────────────────────────────────
+    runtimeOnly 'org.postgresql:postgresql'
+
+    // ── Lombok ─────────────────────────────────────────────────
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+    testCompileOnly 'org.projectlombok:lombok'
+    testAnnotationProcessor 'org.projectlombok:lombok'
+
+    // ── Test ───────────────────────────────────────────────────
+    testImplementation 'org.springframework.boot:spring-boot-starter-actuator-test'
+    testImplementation 'org.springframework.boot:spring-boot-testcontainers'
+    testImplementation 'org.springframework.boot:spring-boot-starter-data-jpa-test'
+    testImplementation 'org.springframework.boot:spring-boot-starter-flyway-test'
+    testImplementation 'org.springframework.boot:spring-boot-starter-security-oauth2-authorization-server-test'
+    testImplementation 'org.springframework.boot:spring-boot-starter-security-oauth2-resource-server-test'
+    testImplementation 'org.springframework.boot:spring-boot-starter-security-test'
+    testImplementation 'org.springframework.boot:spring-boot-starter-validation-test'
+    testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
+    testImplementation 'org.springframework.boot:spring-boot-starter-websocket-test'
+    testImplementation "org.testcontainers:junit-jupiter:$testcontainersVersion"
+    testImplementation "org.testcontainers:postgresql:$testcontainersVersion"
+}
+
+// ── Test ───────────────────────────────────────────────────────
+tasks.withType(Test).configureEach {
+    useJUnitPlatform()
+}
+
+// ── Jib (Docker image) ────────────────────────────────────────
+jib {
+    from {
+        image = 'eclipse-temurin:25-jre-alpine'
+    }
+    to {
+        image = 'sticker-swap-backend'
+        tags = ['latest', version]
+    }
+    container {
+        mainClass = 'br.com.stickerswap.StickerSwapBackendApplication'
+        ports = ['8080']
+        jvmFlags = [
+            '-XX:+UseContainerSupport',
+            '-XX:MaxRAMPercentage=75.0',
+            '-Djava.security.egd=file:/dev/./urandom'
+        ]
+        creationTime = 'USE_CURRENT_TIMESTAMP'
+        environment = [
+            'SPRING_PROFILES_ACTIVE': 'prod'
+        ]
+    }
+}

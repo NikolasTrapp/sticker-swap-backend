@@ -1,0 +1,62 @@
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/stickerswap}
+    username: ${DB_USER:stickerswap}
+    password: ${DB_PASSWORD:stickerswap}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  mail:
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+
+app:
+  admin:
+    email: ${ADMIN_EMAIL:admin@stickerswap.com}
+    password: ${ADMIN_PASSWORD:changeme}
+  security:
+    issuer: ${APP_SECURITY_ISSUER:http://localhost:8080}
+    public-base-url: ${APP_PUBLIC_BASE_URL:http://localhost:8080}
+    password-reset-url: ${APP_PASSWORD_RESET_URL:http://localhost:4200/password-reset}
+    jwk-set-json: ${APP_SECURITY_JWK_SET_JSON:}
+    cors:
+      allowed-origins: ${APP_SECURITY_CORS_ALLOWED_ORIGINS:http://localhost:4200,http://localhost:5173,http://localhost:3000}
+  oauth:
+    web-client:
+      client-id: ${OAUTH_WEB_CLIENT_ID:sticker-swap-web}
+      redirect-uris: ${OAUTH_WEB_REDIRECT_URIS:http://localhost:4200/oauth/callback,http://localhost:5173/oauth/callback,http://localhost:3000/oauth/callback}
+      post-logout-redirect-uris: ${OAUTH_WEB_POST_LOGOUT_REDIRECT_URIS:http://localhost:4200,http://localhost:5173,http://localhost:3000}
+  mail:
+    from: ${APP_MAIL_FROM:no-reply@stickerswap.com}
+    delivery-mode: ${APP_MAIL_DELIVERY_MODE:smtp}
+
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  level:
+    br.com.stickerswap: INFO
+    org.springframework.security: WARN

@@ -1,0 +1,7 @@
+app:
+  mail:
+    delivery-mode: log
+
+logging:
+  level:
+    br.com.stickerswap.identity.service.AccountEmailServiceImpl: DEBUG

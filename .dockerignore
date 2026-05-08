@@ -1,0 +1,14 @@
+.git
+.gitignore
+.idea
+*.iml
+.vscode
+.mvn
+mvnw
+mvnw.cmd
+pom.xml
+target/
+build/
+.gradle/
+*.md
+docker-compose*.yml
