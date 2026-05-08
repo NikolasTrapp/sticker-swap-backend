@@ -9,6 +9,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.annotation.web.configurers.oauth2.server.authorization.OAuth2AuthorizationServerConfigurer;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -61,15 +62,16 @@ public class SecurityConfig {
         RequestMatcher endpointsMatcher = authorizationServerConfigurer.getEndpointsMatcher();
 
         http
-            .securityMatcher(endpointsMatcher)
-            .with(authorizationServerConfigurer, authorizationServer ->
-                    authorizationServer.oidc(Customizer.withDefaults()))
-            .cors(Customizer.withDefaults())
-            .authorizeHttpRequests(auth -> auth.anyRequest().authenticated())
-            .csrf(csrf -> csrf.ignoringRequestMatchers(endpointsMatcher))
-            .exceptionHandling(ex -> ex.authenticationEntryPoint(new LoginUrlAuthenticationEntryPoint("/login")))
-            .oauth2ResourceServer(rs -> rs.jwt(Customizer.withDefaults()))
-            .addFilterBefore(rateLimitingFilter, UsernamePasswordAuthenticationFilter.class);
+                .securityMatcher(endpointsMatcher)
+                .with(authorizationServerConfigurer, authorizationServer ->
+                        authorizationServer.oidc(Customizer.withDefaults()))
+                .cors(Customizer.withDefaults())
+                .authorizeHttpRequests(auth -> auth.anyRequest().authenticated())
+                //.csrf(csrf -> csrf.ignoringRequestMatchers(endpointsMatcher))
+                .csrf(AbstractHttpConfigurer::disable)
+                .exceptionHandling(ex -> ex.authenticationEntryPoint(new LoginUrlAuthenticationEntryPoint("/login")))
+                .oauth2ResourceServer(rs -> rs.jwt(Customizer.withDefaults()))
+                .addFilterBefore(rateLimitingFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
@@ -82,12 +84,12 @@ public class SecurityConfig {
             LoginSuccessHandler loginSuccessHandler
     ) throws Exception {
         http
-            .securityMatcher("/login", "/logout", "/error", "/oauth2/login", "/oauth2/csrf")
-            .cors(Customizer.withDefaults())
-            .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
-            .csrf(csrf -> csrf.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()))
-            .formLogin(form -> form.successHandler(loginSuccessHandler))
-            .addFilterBefore(rateLimitingFilter, UsernamePasswordAuthenticationFilter.class);
+                .securityMatcher("/login", "/logout", "/error", "/oauth2/login", "/oauth2/csrf")
+                .cors(Customizer.withDefaults())
+                .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
+                .csrf(csrf -> csrf.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()))
+                .formLogin(form -> form.successHandler(loginSuccessHandler))
+                .addFilterBefore(rateLimitingFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
@@ -99,17 +101,17 @@ public class SecurityConfig {
             RateLimitingFilter rateLimitingFilter
     ) throws Exception {
         http
-            .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .cors(Customizer.withDefaults())
-            .csrf(csrf -> csrf.disable())
-            .oauth2ResourceServer(rs -> rs.jwt(jwt ->
-                    jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())))
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers(PUBLIC_PATHS).permitAll()
-                .requestMatchers("/admin/**").hasRole("ADMIN")
-                .anyRequest().authenticated()
-            )
-            .addFilterAfter(rateLimitingFilter, BearerTokenAuthenticationFilter.class);
+                .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .cors(Customizer.withDefaults())
+                .csrf(csrf -> csrf.disable())
+                .oauth2ResourceServer(rs -> rs.jwt(jwt ->
+                        jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())))
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(PUBLIC_PATHS).permitAll()
+                        .requestMatchers("/admin/**").hasRole("ADMIN")
+                        .anyRequest().authenticated()
+                )
+                .addFilterAfter(rateLimitingFilter, BearerTokenAuthenticationFilter.class);
         return http.build();
     }
 
@@ -150,7 +152,7 @@ public class SecurityConfig {
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource(
-            @Value("${app.security.cors.allowed-origins:http://localhost:4200}") String allowedOrigins
+            @Value("${app.security.cors.allowed-origins:http://localhost:4200,http://127.0.0.1:4200}") String allowedOrigins
     ) {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOrigins(splitCsv(allowedOrigins));

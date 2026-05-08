@@ -3,7 +3,7 @@ spring:
     locations: classpath:db/migration
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: none
     open-in-view: false
 
 # ── Testcontainers ──────────────────────────────────────────────
@@ -21,13 +21,13 @@ app:
   security:
     issuer: http://localhost:8080
     public-base-url: http://localhost:8080
-    password-reset-url: http://localhost:5173/password-reset
+    password-reset-url: http://localhost:4200/password-reset
     jwk-set-json: ""
   oauth:
     web-client:
       client-id: sticker-swap-web
-      redirect-uris: http://localhost:5173/oauth/callback,http://localhost:3000/oauth/callback
-      post-logout-redirect-uris: http://localhost:5173,http://localhost:3000
+      redirect-uris: http://localhost:4200/oauth/callback,http://127.0.0.1:4200/oauth/callback
+      post-logout-redirect-uris: http://localhost:4200,http://127.0.0.1:4200
 
 logging:
   level:

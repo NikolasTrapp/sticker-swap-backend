@@ -1,6 +1,6 @@
 package br.com.stickerswap.infrastructure.security;
 
-import br.com.stickerswap.identity.infrastructure.persistence.UserRepository;
+import br.com.stickerswap.infrastructure.repository.identity.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

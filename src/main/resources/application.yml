@@ -6,7 +6,7 @@ spring:
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: none
     open-in-view: false
   flyway:
     enabled: true
@@ -44,12 +44,12 @@ app:
     password-reset-url: ${APP_PASSWORD_RESET_URL:http://localhost:4200/password-reset}
     jwk-set-json: ${APP_SECURITY_JWK_SET_JSON:}
     cors:
-      allowed-origins: ${APP_SECURITY_CORS_ALLOWED_ORIGINS:http://localhost:4200,http://localhost:5173,http://localhost:3000}
+      allowed-origins: ${APP_SECURITY_CORS_ALLOWED_ORIGINS:http://localhost:4200,http://127.0.0.1:4200}
   oauth:
     web-client:
       client-id: ${OAUTH_WEB_CLIENT_ID:sticker-swap-web}
-      redirect-uris: ${OAUTH_WEB_REDIRECT_URIS:http://localhost:4200/oauth/callback,http://localhost:5173/oauth/callback,http://localhost:3000/oauth/callback}
-      post-logout-redirect-uris: ${OAUTH_WEB_POST_LOGOUT_REDIRECT_URIS:http://localhost:4200,http://localhost:5173,http://localhost:3000}
+      redirect-uris: ${OAUTH_WEB_REDIRECT_URIS:http://localhost:4200/oauth/callback,http://127.0.0.1:4200/oauth/callback}
+      post-logout-redirect-uris: ${OAUTH_WEB_POST_LOGOUT_REDIRECT_URIS:http://localhost:4200,http://127.0.0.1:4200}
   mail:
     from: ${APP_MAIL_FROM:no-reply@stickerswap.com}
     delivery-mode: ${APP_MAIL_DELIVERY_MODE:smtp}
@@ -59,4 +59,7 @@ logging:
     console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
   level:
     br.com.stickerswap: INFO
-    org.springframework.security: WARN
+    org:
+      springframework:
+        security: TRACE
+        security.oauth2: TRACE

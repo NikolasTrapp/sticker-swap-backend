@@ -1,6 +1,6 @@
 package br.com.stickerswap.infrastructure.security;
 
-import br.com.stickerswap.identity.infrastructure.persistence.UserRepository;
+import br.com.stickerswap.infrastructure.repository.identity.UserRepository;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;

@@ -26,10 +26,10 @@ public class OAuthClientSeeder implements ApplicationRunner {
     @Value("${app.oauth.web-client.client-id:sticker-swap-web}")
     private String clientId;
 
-    @Value("${app.oauth.web-client.redirect-uris:http://localhost:5173/oauth/callback,http://localhost:3000/oauth/callback}")
+    @Value("${app.oauth.web-client.redirect-uris:http://localhost:4200/oauth/callback,http://127.0.0.1:4200/oauth/callback}")
     private String redirectUris;
 
-    @Value("${app.oauth.web-client.post-logout-redirect-uris:http://localhost:5173,http://localhost:3000}")
+    @Value("${app.oauth.web-client.post-logout-redirect-uris:http://localhost:4200,http://127.0.0.1:4200}")
     private String postLogoutRedirectUris;
 
     @Override
