@@ -28,7 +28,7 @@ app:
       post-logout-redirect-uris: ${OAUTH_WEB_POST_LOGOUT_REDIRECT_URIS}
   mail:
     from: ${APP_MAIL_FROM}
-    delivery-mode: smtp
+    delivery-mode: ${APP_MAIL_DELIVERY_MODE}
 
 management:
   endpoint:
