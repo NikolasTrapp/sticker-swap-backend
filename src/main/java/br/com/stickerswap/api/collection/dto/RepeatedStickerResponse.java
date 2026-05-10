@@ -20,7 +20,7 @@ public record RepeatedStickerResponse(
         return new RepeatedStickerResponse(
                 entry.getId(),
                 sticker.getId(),
-                sticker.getNumber(),
+                sticker.getCode(),
                 sticker.getName(),
                 entry.getQuantity(),
                 alsoWanted ? OVERLAP_WARNING : null

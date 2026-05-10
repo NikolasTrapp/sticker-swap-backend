@@ -1,8 +1,6 @@
 package br.com.stickerswap.api.album.dto;
 
-import br.com.stickerswap.domain.album.model.Album;
-
-import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 public record AlbumResponse(
@@ -11,7 +9,7 @@ public record AlbumResponse(
         String description,
         Integer year,
         boolean active,
-        Instant createdAt,
-        Instant updatedAt
+        LocalDateTime createdAt,
+        LocalDateTime updatedAt
 ) {
 }

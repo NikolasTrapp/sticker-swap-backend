@@ -1,6 +1,6 @@
 package br.com.stickerswap.api.search.dto;
 
-import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 public record HolderResponse(
@@ -10,5 +10,5 @@ public record HolderResponse(
         String state,            // null when showCityStatePublicly = false
         int quantity,
         boolean isPotentialMatch,
-        Instant lastActivityAt
+        LocalDateTime lastActivityAt
 ) {}

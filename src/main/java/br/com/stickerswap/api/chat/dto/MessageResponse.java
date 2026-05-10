@@ -2,7 +2,7 @@ package br.com.stickerswap.api.chat.dto;
 
 import br.com.stickerswap.domain.chat.model.MessageType;
 
-import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 public record MessageResponse(
@@ -11,5 +11,5 @@ public record MessageResponse(
         UUID senderUserId,
         MessageType type,
         String body,
-        Instant sentAt
+        LocalDateTime sentAt
 ) {}

@@ -15,6 +15,9 @@ import org.springframework.stereotype.Component;
 
 import java.time.Duration;
 import java.util.Arrays;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Component
@@ -34,7 +37,21 @@ public class OAuthClientSeeder implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
-        if (registeredClientRepository.findByClientId(clientId) != null) {
+        Set<String> configuredRedirectUris = new LinkedHashSet<>(splitCsv(redirectUris));
+        Set<String> configuredPostLogoutUris = new LinkedHashSet<>(splitCsv(postLogoutRedirectUris));
+
+        RegisteredClient existing = registeredClientRepository.findByClientId(clientId);
+
+        if (existing != null) {
+            if (existing.getRedirectUris().equals(configuredRedirectUris)
+                    && existing.getPostLogoutRedirectUris().equals(configuredPostLogoutUris)) {
+                return;
+            }
+            registeredClientRepository.save(
+                    RegisteredClient.from(existing)
+                            .redirectUris(uris -> { uris.clear(); uris.addAll(configuredRedirectUris); })
+                            .postLogoutRedirectUris(uris -> { uris.clear(); uris.addAll(configuredPostLogoutUris); })
+                            .build());
             return;
         }
 
@@ -57,12 +74,12 @@ public class OAuthClientSeeder implements ApplicationRunner {
                         .reuseRefreshTokens(false)
                         .build());
 
-        splitCsv(redirectUris).forEach(builder::redirectUri);
-        splitCsv(postLogoutRedirectUris).forEach(builder::postLogoutRedirectUri);
+        configuredRedirectUris.forEach(builder::redirectUri);
+        configuredPostLogoutUris.forEach(builder::postLogoutRedirectUri);
         registeredClientRepository.save(builder.build());
     }
 
-    private java.util.List<String> splitCsv(String value) {
+    private List<String> splitCsv(String value) {
         return Arrays.stream(value.split(","))
                 .map(String::trim)
                 .filter(item -> !item.isEmpty())

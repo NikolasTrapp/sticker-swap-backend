@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.time.Instant;
+import java.time.LocalDateTime;
 
 @RestController
 @RequiredArgsConstructor
@@ -51,7 +51,7 @@ public class OAuthBrowserAuthController {
 
         userRepository.findByEmail(email)
                 .ifPresent(user -> {
-                    user.setLastActivityAt(Instant.now());
+                    user.setLastActivityAt(LocalDateTime.now());
                     userRepository.save(user);
                 });
     }

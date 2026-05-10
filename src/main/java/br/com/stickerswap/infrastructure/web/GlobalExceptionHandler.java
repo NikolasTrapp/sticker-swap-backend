@@ -48,7 +48,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(BusinessRuleException.class)
     public ResponseEntity<ApiError> handleBusinessRule(BusinessRuleException ex, HttpServletRequest req) {
-        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_CONTENT).body(
                 ApiError.of(422, "Unprocessable Entity", ex.getMessage(), req.getRequestURI()));
     }
 

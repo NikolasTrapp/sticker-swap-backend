@@ -18,8 +18,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
-import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -100,7 +99,7 @@ public class SearchServiceImpl implements SearchService {
             city = profile.getCity();
             state = profile.getState();
         }
-        Instant lastActivity = user != null ? user.getLastActivityAt() : null;
+        LocalDateTime lastActivity = user != null ? user.getLastActivityAt() : null;
         String nickname = profile != null ? profile.getNickname() : null;
         return new HolderResponse(h.getUserId(), nickname, city, state,
                 h.getQuantity(), isPotentialMatch, lastActivity);
@@ -117,7 +116,7 @@ public class SearchServiceImpl implements SearchService {
                 // 4. More quantity first
                 .thenComparing(Comparator.comparingInt(HolderResponse::quantity).reversed())
                 // 5. Most recent activity first
-                .thenComparing(h -> h.lastActivityAt() == null ? Instant.MIN : h.lastActivityAt(),
+                .thenComparing(h -> h.lastActivityAt() == null ? LocalDateTime.MIN : h.lastActivityAt(),
                         Comparator.reverseOrder());
     }
 

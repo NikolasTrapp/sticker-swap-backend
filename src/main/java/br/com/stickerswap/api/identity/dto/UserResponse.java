@@ -2,7 +2,7 @@ package br.com.stickerswap.api.identity.dto;
 
 import br.com.stickerswap.domain.identity.model.User;
 
-import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 public record UserResponse(
@@ -11,7 +11,7 @@ public record UserResponse(
         String role,
         String status,
         boolean emailVerified,
-        Instant createdAt
+        LocalDateTime createdAt
 ) {
     public static UserResponse from(User user) {
         return new UserResponse(

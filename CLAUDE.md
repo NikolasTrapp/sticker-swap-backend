@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Stack
 
 - Java 25, Spring Boot 4.0.4, Spring Framework 7.x
-- Maven (use `./mvnw`, not system `mvn`)
+- Gradle (use `./gradlew`, not system `gradle`)
 - PostgreSQL 16 (local via existing Docker container named `postgres`)
 - Flyway migrations in `src/main/resources/db/migration/`
 - springdoc-openapi 2.8.6 for Swagger UI
@@ -14,16 +14,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 # Build (compile only)
-./mvnw compile
+./gradlew compileJava
 
 # Run tests
-./mvnw test
+./gradlew test
 
 # Run application (requires Postgres running)
-./mvnw spring-boot:run
+./gradlew bootRun
 
 # Package JAR
-./mvnw package -DskipTests
+./gradlew bootJar
 ```
 
 ## Local database setup
@@ -82,20 +82,54 @@ All errors follow `ApiError` in `shared/error/`:
 
 - `POST /auth/register` — `{"email","password"}` → 201 UserResponse
 - Browser SPA login uses Authorization Code + PKCE:
-  - `GET /oauth2/csrf` — returns CSRF token and sets `XSRF-TOKEN`
-  - `POST /oauth2/login` — `{"email","password"}` with `X-XSRF-TOKEN` and credentials; creates the browser session only
-  - `GET /oauth2/authorize` → frontend `/oauth/callback`
+  - `GET /oauth2/csrf` — returns CSRF token and sets `XSRF-TOKEN` cookie (handled by `OAuthBrowserAuthController`)
+  - `POST /oauth2/login` — `{"email","password"}` with `X-XSRF-TOKEN` header and `withCredentials`; creates the browser session only (204 No Content)
+  - `GET /oauth2/authorize` — browser redirect triggered by the SPA; requires the session established above
+  - Backend redirects to frontend `/oauth/callback?code=…`
   - `POST /oauth2/token` exchanges the authorization code for tokens
 - Use `Authorization: Bearer <token>` in subsequent API requests.
-- Tokens are RS256 JWTs. For production, provide `APP_SECURITY_JWK_SET_JSON`; otherwise startup generates an ephemeral RSA key.
+- Tokens are RS256 JWTs. For production, provide `APP_SECURITY_JWK_SET_JSON`; otherwise startup generates an ephemeral RSA key (key is lost on restart, invalidating all tokens).
 - Default admin: `admin@stickerswap.com` / `changeme` (override via `ADMIN_EMAIL`/`ADMIN_PASSWORD`)
+- JWT claims customized by `OAuthTokenCustomizerConfig`: `sub` = user UUID, `email`, `role`.
 
-Important frontend env vars:
+### OAuth2 client (seeder)
 
-- `APP_SECURITY_CORS_ALLOWED_ORIGINS`
-- `OAUTH_WEB_REDIRECT_URIS`
-- `OAUTH_WEB_POST_LOGOUT_REDIRECT_URIS`
-- `APP_PASSWORD_RESET_URL`
+`OAuthClientSeeder` runs on startup and registers `sticker-swap-web` in the `oauth2_registered_client` JDBC table. **It skips seeding if the client already exists.** If you need to change redirect URIs in an existing environment, delete the row first:
+
+```sql
+DELETE FROM oauth2_registered_client WHERE client_id = 'sticker-swap-web';
+```
+
+Then restart the app to re-seed with current config values.
+
+### Security filter chains (in order)
+
+| Order | Name | Matcher | Purpose |
+|---|---|---|---|
+| 1 | `authorizationServerFilterChain` | OAuth2 endpoints | Spring Authorization Server |
+| 2 | `loginFilterChain` | `/login`, `/logout`, `/oauth2/login`, `/oauth2/csrf` | Session-based credential exchange |
+| 3 | `apiFilterChain` | `/**` | Stateless JWT resource server |
+
+### PKCE / origin consistency
+
+The SPA's `redirect_uri` must match exactly a URI registered in `oauth2_registered_client`. The OIDC library stores the PKCE verifier keyed to the SPA's browser origin (`window.location.origin`). **If the SPA origin and the `redirect_uri` differ** (e.g. user accesses `127.0.0.1:4200` but `redirectUrl` is `localhost:4200`), the code-exchange fails silently at the callback. Ensure all origins you use during development are registered as redirect URIs.
+
+### Database: OAuth2 JDBC tables
+
+Migration `V6` creates the three Spring Authorization Server JDBC tables:
+
+- `oauth2_registered_client` — OAuth clients (populated by seeder)
+- `oauth2_authorization` — per-request authorization state and issued tokens
+- `oauth2_authorization_consent` — consent records
+
+### Important backend env vars
+
+- `APP_SECURITY_CORS_ALLOWED_ORIGINS` — comma-separated allowed origins (default: `localhost:4200,127.0.0.1:4200`)
+- `OAUTH_WEB_REDIRECT_URIS` — comma-separated redirect URIs for `sticker-swap-web` client
+- `OAUTH_WEB_POST_LOGOUT_REDIRECT_URIS` — post-logout redirect URIs
+- `APP_SECURITY_FRONTEND_LOGIN_URL` — URL of the SPA login page (used as auth entry point; default: `http://localhost:4200/login`)
+- `APP_PASSWORD_RESET_URL` — full URL of the SPA password-reset page
+- `APP_SECURITY_ISSUER` — OAuth2 issuer URL (must match what the SPA uses as `authority`)
 
 ## Role-based access
 

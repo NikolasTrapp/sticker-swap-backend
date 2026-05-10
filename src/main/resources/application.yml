@@ -1,8 +1,8 @@
 spring:
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/stickerswap}
-    username: ${DB_USER:stickerswap}
-    password: ${DB_PASSWORD:stickerswap}
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
@@ -42,6 +42,7 @@ app:
     issuer: ${APP_SECURITY_ISSUER:http://localhost:8080}
     public-base-url: ${APP_PUBLIC_BASE_URL:http://localhost:8080}
     password-reset-url: ${APP_PASSWORD_RESET_URL:http://localhost:4200/password-reset}
+    frontend-login-url: ${APP_SECURITY_FRONTEND_LOGIN_URL:http://localhost:4200/login}
     jwk-set-json: ${APP_SECURITY_JWK_SET_JSON:}
     cors:
       allowed-origins: ${APP_SECURITY_CORS_ALLOWED_ORIGINS:http://localhost:4200,http://127.0.0.1:4200}
@@ -60,6 +61,5 @@ logging:
   level:
     br.com.stickerswap: INFO
     org:
-      springframework:
-        security: TRACE
-        security.oauth2: TRACE
+      hibernate.SQL: DEBUG
+      springframework.security: WARN

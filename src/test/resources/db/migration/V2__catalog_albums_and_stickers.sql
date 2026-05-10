@@ -14,7 +14,7 @@ CREATE TABLE stickers (
     id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     album_id     UUID NOT NULL REFERENCES albums (id),
     number       VARCHAR(20) NOT NULL,
-    name         VARCHAR(200) NOT NULL,
+    code         VARCHAR(200) NOT NULL,
     description  TEXT,
     image_url    VARCHAR(500),
     active       BOOLEAN NOT NULL DEFAULT TRUE,

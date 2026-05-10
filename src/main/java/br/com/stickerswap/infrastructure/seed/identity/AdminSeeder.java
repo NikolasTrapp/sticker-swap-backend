@@ -35,7 +35,7 @@ public class AdminSeeder implements ApplicationRunner {
             admin.setRole(UserRole.ADMIN);
             admin.setStatus(UserStatus.ACTIVE);
             admin.setEmailVerified(true);
-            admin.setEmailVerifiedAt(java.time.Instant.now());
+            admin.setEmailVerifiedAt(java.time.LocalDateTime.now());
             userRepository.save(admin);
             log.info("Admin user created: {}", adminEmail);
         }

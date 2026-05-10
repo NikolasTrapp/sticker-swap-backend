@@ -1,18 +1,16 @@
 package br.com.stickerswap.api.album.dto;
 
-import br.com.stickerswap.domain.album.model.Sticker;
-
-import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 public record StickerResponse(
         UUID id,
         UUID albumId,
-        String number,
+        String code,
         String name,
         String description,
         boolean active,
-        Instant createdAt,
-        Instant updatedAt
+        LocalDateTime createdAt,
+        LocalDateTime updatedAt
 ) {
 }

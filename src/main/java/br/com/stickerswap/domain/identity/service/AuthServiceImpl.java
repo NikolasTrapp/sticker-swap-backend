@@ -16,7 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
-import java.time.Instant;
+import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -81,7 +81,7 @@ public class AuthServiceImpl implements AuthService {
 
         if (!user.isEmailVerified()) {
             user.setEmailVerified(true);
-            user.setEmailVerifiedAt(Instant.now());
+            user.setEmailVerifiedAt(LocalDateTime.now());
             userRepository.save(user);
         }
 

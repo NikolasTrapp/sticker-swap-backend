@@ -12,7 +12,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.time.Duration;
-import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.Base64;
 import java.util.HexFormat;
 
@@ -32,14 +32,14 @@ public class SecurityTokenServiceImpl implements SecurityTokenService {
         token.setUser(user);
         token.setType(type);
         token.setTokenHash(hash(rawToken));
-        token.setExpiresAt(Instant.now().plus(ttl));
+        token.setExpiresAt(LocalDateTime.now().plus(ttl));
         securityTokenRepository.save(token);
         return rawToken;
     }
 
     @Override
     public SecurityToken consumeToken(String rawToken, SecurityTokenType type) {
-        Instant now = Instant.now();
+        LocalDateTime now = LocalDateTime.now();
         SecurityToken token = securityTokenRepository.findByTokenHashAndType(hash(rawToken), type)
                 .orElseThrow(() -> new BusinessRuleException("Invalid or expired token"));
 
@@ -53,7 +53,7 @@ public class SecurityTokenServiceImpl implements SecurityTokenService {
 
     @Override
     public void consumeOpenTokens(User user, SecurityTokenType type) {
-        Instant now = Instant.now();
+        LocalDateTime now = LocalDateTime.now();
         securityTokenRepository.findByUserAndTypeAndConsumedAtIsNull(user, type)
                 .forEach(token -> {
                     token.setConsumedAt(now);

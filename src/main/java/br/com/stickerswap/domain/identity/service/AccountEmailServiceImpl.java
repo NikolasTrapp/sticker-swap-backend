@@ -57,13 +57,13 @@ public class AccountEmailServiceImpl implements AccountEmailService {
 
     private void send(String to, String subject, String text) {
         if ("log".equalsIgnoreCase(deliveryMode)) {
-            log.debug("Mail delivery is in log mode. Email to {} with subject '{}':\n{}", to, subject, text);
+            log.info("Mail delivery is in log mode. Email to {} with subject '{}':\n{}", to, subject, text);
             return;
         }
 
         JavaMailSender mailSender = mailSenderProvider.getIfAvailable();
         if (mailSender == null) {
-            log.debug("Mail sender is not configured. Email to {} with subject '{}':\n{}", to, subject, text);
+            log.warn("Mail sender is not configured. Email to {} with subject '{}':\n{}", to, subject, text);
             return;
         }
 

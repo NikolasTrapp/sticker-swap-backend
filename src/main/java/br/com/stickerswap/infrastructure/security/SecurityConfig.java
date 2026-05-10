@@ -24,7 +24,6 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.util.matcher.RequestMatcher;
@@ -52,12 +51,15 @@ public class SecurityConfig {
             "/ws/**"   // JWT validated at STOMP CONNECT level by JwtChannelInterceptor
     };
 
+    @Value("${app.security.frontend-login-url:http://localhost:4200/login}")
+    private String frontendLoginUrl;
+
     @Bean
     @Order(1)
     public SecurityFilterChain authorizationServerFilterChain(
             HttpSecurity http,
             RateLimitingFilter rateLimitingFilter
-    ) throws Exception {
+    ) {
         OAuth2AuthorizationServerConfigurer authorizationServerConfigurer = new OAuth2AuthorizationServerConfigurer();
         RequestMatcher endpointsMatcher = authorizationServerConfigurer.getEndpointsMatcher();
 
@@ -67,9 +69,9 @@ public class SecurityConfig {
                         authorizationServer.oidc(Customizer.withDefaults()))
                 .cors(Customizer.withDefaults())
                 .authorizeHttpRequests(auth -> auth.anyRequest().authenticated())
-                //.csrf(csrf -> csrf.ignoringRequestMatchers(endpointsMatcher))
                 .csrf(AbstractHttpConfigurer::disable)
-                .exceptionHandling(ex -> ex.authenticationEntryPoint(new LoginUrlAuthenticationEntryPoint("/login")))
+                .exceptionHandling(ex -> ex.authenticationEntryPoint(
+                        (request, response, authException) -> response.sendRedirect(frontendLoginUrl)))
                 .oauth2ResourceServer(rs -> rs.jwt(Customizer.withDefaults()))
                 .addFilterBefore(rateLimitingFilter, UsernamePasswordAuthenticationFilter.class);
 
@@ -82,7 +84,7 @@ public class SecurityConfig {
             HttpSecurity http,
             RateLimitingFilter rateLimitingFilter,
             LoginSuccessHandler loginSuccessHandler
-    ) throws Exception {
+    ) {
         http
                 .securityMatcher("/login", "/logout", "/error", "/oauth2/login", "/oauth2/csrf")
                 .cors(Customizer.withDefaults())
@@ -99,11 +101,11 @@ public class SecurityConfig {
     public SecurityFilterChain apiFilterChain(
             HttpSecurity http,
             RateLimitingFilter rateLimitingFilter
-    ) throws Exception {
+    ) {
         http
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .cors(Customizer.withDefaults())
-                .csrf(csrf -> csrf.disable())
+                .csrf(AbstractHttpConfigurer::disable)
                 .oauth2ResourceServer(rs -> rs.jwt(jwt ->
                         jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())))
                 .authorizeHttpRequests(auth -> auth
@@ -146,7 +148,7 @@ public class SecurityConfig {
     }
 
     @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) throws Exception {
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) {
         return configuration.getAuthenticationManager();
     }
 

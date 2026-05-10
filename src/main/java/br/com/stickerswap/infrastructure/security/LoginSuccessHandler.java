@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
-import java.time.Instant;
+import java.time.LocalDateTime;
 
 @Component
 @RequiredArgsConstructor
@@ -30,7 +30,7 @@ public class LoginSuccessHandler implements AuthenticationSuccessHandler {
     ) throws IOException, ServletException {
         userRepository.findByEmail(authentication.getName())
                 .ifPresent(user -> {
-                    user.setLastActivityAt(Instant.now());
+                    user.setLastActivityAt(LocalDateTime.now());
                     userRepository.save(user);
                 });
         delegate.onAuthenticationSuccess(request, response, authentication);

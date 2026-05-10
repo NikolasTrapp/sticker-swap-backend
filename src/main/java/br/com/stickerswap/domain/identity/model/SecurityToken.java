@@ -4,12 +4,15 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
 @Table(name = "security_tokens")
+@EntityListeners(AuditingEntityListener.class)
 @Getter
 @Setter
 @NoArgsConstructor
@@ -31,18 +34,19 @@ public class SecurityToken {
     private String tokenHash;
 
     @Column(nullable = false)
-    private Instant expiresAt;
+    private LocalDateTime expiresAt;
 
-    private Instant consumedAt;
+    private LocalDateTime consumedAt;
 
+    @CreatedDate
     @Column(nullable = false, updatable = false)
-    private Instant createdAt = Instant.now();
+    private LocalDateTime createdAt;
 
     public boolean isConsumed() {
         return consumedAt != null;
     }
 
-    public boolean isExpired(Instant now) {
+    public boolean isExpired(LocalDateTime now) {
         return !expiresAt.isAfter(now);
     }
 }

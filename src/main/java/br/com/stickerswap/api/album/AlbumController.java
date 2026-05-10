@@ -39,7 +39,7 @@ public class AlbumController {
     @Operation(summary = "List active stickers in an album")
     public Page<StickerResponse> listStickers(
             @PathVariable UUID albumId,
-            @PageableDefault(size = 50, sort = "number") Pageable pageable) {
+            @PageableDefault(size = 50, sort = "code") Pageable pageable) {
         return albumService.listActiveStickers(albumId, pageable);
     }
 }

@@ -65,7 +65,7 @@ public class ChatServiceImpl implements ChatService {
             intent.setSenderUserId(null);
             intent.setType(MessageType.SYSTEM_INTENT);
             intent.setBody("Um usuário demonstrou interesse em trocar pela figurinha " +
-                           sticker.getNumber() + " — " + sticker.getName() + ".");
+                           sticker.getCode() + " — " + sticker.getName() + ".");
             messageRepo.save(intent);
         }
 
@@ -129,7 +129,7 @@ public class ChatServiceImpl implements ChatService {
         msg = messageRepo.save(msg);
 
         // Touch updatedAt so the conversation rises to the top of listings
-        conversation.setUpdatedAt(java.time.Instant.now());
+        conversation.setUpdatedAt(java.time.LocalDateTime.now());
         conversationRepo.save(conversation);
 
         return toMessageResponse(msg);
@@ -146,7 +146,7 @@ public class ChatServiceImpl implements ChatService {
         return new ConversationResponse(
                 c.getId(), otherUserId, otherNickname,
                 sticker != null ? sticker.getId() : c.getStickerId(),
-                sticker != null ? sticker.getNumber() : null,
+                sticker != null ? sticker.getCode() : null,
                 sticker != null ? sticker.getName() : null,
                 c.getCreatedAt(), c.getUpdatedAt()
         );

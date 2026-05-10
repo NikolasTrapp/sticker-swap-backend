@@ -11,7 +11,7 @@ import java.util.UUID;
 public interface StickerRepository extends JpaRepository<Sticker, UUID> {
     Page<Sticker> findByAlbumId(UUID albumId, Pageable pageable);
     Page<Sticker> findByAlbumIdAndActive(UUID albumId, boolean active, Pageable pageable);
-    boolean existsByAlbumIdAndNumber(UUID albumId, String number);
-    boolean existsByAlbumIdAndNumberAndIdNot(UUID albumId, String number, UUID id);
+    boolean existsByAlbumIdAndCode(UUID albumId, String code);
+    boolean existsByAlbumIdAndCodeAndIdNot(UUID albumId, String code, UUID id);
     Optional<Sticker> findByIdAndActive(UUID id, boolean active);
 }

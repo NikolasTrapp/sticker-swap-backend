@@ -63,7 +63,7 @@ public class AdminAlbumController {
     @GetMapping("/albums/{albumId}/stickers")
     @Operation(summary = "List all stickers in an album, including inactive")
     public Page<StickerResponse> listStickers(@PathVariable UUID albumId,
-                                              @PageableDefault(size = 200, sort = "number") Pageable pageable) {
+                                              @PageableDefault(size = 200, sort = "code") Pageable pageable) {
         return albumService.listStickers(albumId, pageable);
     }
 

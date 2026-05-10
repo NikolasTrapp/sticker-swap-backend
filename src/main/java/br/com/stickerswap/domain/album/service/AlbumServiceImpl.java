@@ -87,8 +87,8 @@ public class AlbumServiceImpl implements AlbumService {
     @Transactional
     public StickerResponse createSticker(UUID albumId, CreateStickerRequest req) {
         requireAlbum(albumId);
-        if (stickerRepo.existsByAlbumIdAndNumber(albumId, req.number())) {
-            throw new BusinessRuleException("Sticker number already exists in this album");
+        if (stickerRepo.existsByAlbumIdAndCode(albumId, req.code())) {
+            throw new BusinessRuleException("Sticker code already exists in this album");
         }
 
         Sticker sticker = mapper.toSticker(req, albumId);
@@ -99,9 +99,9 @@ public class AlbumServiceImpl implements AlbumService {
     @Transactional
     public StickerResponse updateSticker(UUID stickerId, UpdateStickerRequest req) {
         Sticker sticker = requireSticker(stickerId);
-        if (req.number() != null && stickerRepo.existsByAlbumIdAndNumberAndIdNot(
-                sticker.getAlbumId(), req.number(), stickerId)) {
-            throw new BusinessRuleException("Sticker number already exists in this album");
+        if (req.code() != null && stickerRepo.existsByAlbumIdAndCodeAndIdNot(
+                sticker.getAlbumId(), req.code(), stickerId)) {
+            throw new BusinessRuleException("Sticker code already exists in this album");
         }
         
         mapper.updateSticker(req, sticker);
