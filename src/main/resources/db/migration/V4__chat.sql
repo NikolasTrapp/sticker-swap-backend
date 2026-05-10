@@ -5,8 +5,7 @@ CREATE TABLE chat_conversations (
     sticker_id  UUID NOT NULL REFERENCES stickers (id),
     created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    CONSTRAINT uk_chat_conversations_pair_sticker UNIQUE (user_a_id, user_b_id, sticker_id),
-    CONSTRAINT chk_chat_conversations_user_order CHECK (user_a_id < user_b_id)
+    CONSTRAINT uk_chat_conversations_pair_sticker UNIQUE (user_a_id, user_b_id, sticker_id)
 );
 
 CREATE INDEX idx_chat_conversations_user_a ON chat_conversations (user_a_id);

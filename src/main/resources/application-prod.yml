@@ -1,4 +1,31 @@
+spring:
+  mail:
+    host: ${MAIL_HOST}
+    port: ${MAIL_PORT}
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+
 app:
+  database:
+    url: ${DB_URL}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+  admin:
+    email: ${ADMIN_EMAIL}
+    password: ${ADMIN_PASSWORD}
   security:
+    issuer: ${APP_SECURITY_ISSUER}
+    public-base-url: ${APP_PUBLIC_BASE_URL}
+    password-reset-url: ${APP_PASSWORD_RESET_URL}
+    frontend-login-url: ${APP_SECURITY_FRONTEND_LOGIN_URL}
     jwk-set-json: ${APP_SECURITY_JWK_SET_JSON}
     jwk-set-json-file: ""
+    cors:
+      allowed-origins: ${APP_SECURITY_CORS_ALLOWED_ORIGINS}
+  oauth:
+    web-client:
+      redirect-uris: ${OAUTH_WEB_REDIRECT_URIS}
+      post-logout-redirect-uris: ${OAUTH_WEB_POST_LOGOUT_REDIRECT_URIS}
+  mail:
+    from: ${APP_MAIL_FROM}
+    delivery-mode: smtp

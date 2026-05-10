@@ -134,14 +134,6 @@ class SearchServiceTest {
     }
 
     private HolderResponse holderResponse(UUID userId) {
-        return new HolderResponse(
-                userId,
-                "Holder",
-                "Curitiba",
-                "PR",
-                1,
-                false,
-                LocalDateTime.now()
-        );
+        return new HolderResponse(userId, "Holder", "Curitiba", "PR", 1, false, LocalDateTime.now(), null);
     }
 }

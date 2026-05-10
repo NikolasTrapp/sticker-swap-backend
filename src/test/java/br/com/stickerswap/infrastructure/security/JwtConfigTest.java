@@ -41,6 +41,6 @@ class JwtConfigTest {
                 jwkSetJsonFile,
                 null
         );
-        return new AppProperties(security, null, null, null);
+        return new AppProperties(null, security, null, null, null, null);
     }
 }

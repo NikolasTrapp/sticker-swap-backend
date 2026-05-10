@@ -1,5 +1,5 @@
 CREATE TABLE notifications (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id UUID PRIMARY KEY,
     recipient_user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     type VARCHAR(30) NOT NULL,
     conversation_id UUID REFERENCES chat_conversations(id) ON DELETE CASCADE,

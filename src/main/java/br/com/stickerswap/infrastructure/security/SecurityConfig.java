@@ -111,6 +111,7 @@ public class SecurityConfig {
                         jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(PUBLIC_PATHS).permitAll()
+                        .requestMatchers("/actuator/**").hasRole("ADMIN")
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )

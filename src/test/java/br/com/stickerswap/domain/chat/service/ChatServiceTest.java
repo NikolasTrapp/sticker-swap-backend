@@ -9,6 +9,7 @@ import br.com.stickerswap.domain.chat.model.MessageType;
 import br.com.stickerswap.infrastructure.repository.chat.ChatConversationRepository;
 import br.com.stickerswap.infrastructure.repository.chat.ChatMessageRepository;
 import br.com.stickerswap.domain.moderation.service.ModerationService;
+import br.com.stickerswap.domain.notification.service.NotificationService;
 import br.com.stickerswap.infrastructure.repository.profile.UserProfileRepository;
 import br.com.stickerswap.shared.error.BusinessRuleException;
 import br.com.stickerswap.shared.error.ResourceNotFoundException;
@@ -35,6 +36,7 @@ class ChatServiceTest {
     @Mock StickerRepository stickerRepo;
     @Mock UserProfileRepository profileRepo;
     @Mock ModerationService moderationService;
+    @Mock NotificationService notificationService;
 
     @InjectMocks ChatServiceImpl chatService;
 

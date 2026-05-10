@@ -1,12 +1,15 @@
 package br.com.stickerswap.domain.moderation.service;
 
+import br.com.stickerswap.api.moderation.dto.BlockedUserResponse;
 import br.com.stickerswap.api.moderation.dto.ReportRequest;
 import br.com.stickerswap.api.moderation.dto.ReportResponse;
 import br.com.stickerswap.domain.moderation.model.ReportStatus;
 import br.com.stickerswap.domain.moderation.model.UserBlock;
 import br.com.stickerswap.domain.moderation.model.UserReport;
+import br.com.stickerswap.domain.profile.model.UserProfile;
 import br.com.stickerswap.infrastructure.repository.moderation.UserBlockRepository;
 import br.com.stickerswap.infrastructure.repository.moderation.UserReportRepository;
+import br.com.stickerswap.infrastructure.repository.profile.UserProfileRepository;
 import br.com.stickerswap.shared.error.BusinessRuleException;
 import br.com.stickerswap.shared.error.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -16,8 +19,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -25,6 +30,7 @@ public class ModerationServiceImpl implements ModerationService {
 
     private final UserBlockRepository blockRepo;
     private final UserReportRepository reportRepo;
+    private final UserProfileRepository profileRepo;
 
     @Transactional
     @Override
@@ -47,6 +53,23 @@ public class ModerationServiceImpl implements ModerationService {
             throw new ResourceNotFoundException("Block", targetId);
         }
         blockRepo.deleteByBlockerIdAndBlockedId(blockerId, targetId);
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public Page<BlockedUserResponse> listBlockedUsers(UUID blockerId, Pageable pageable) {
+        Page<UserBlock> blocks = blockRepo.findByBlockerIdOrderByCreatedAtDesc(blockerId, pageable);
+        if (blocks.isEmpty()) {
+            return blocks.map(block -> BlockedUserResponse.from(block, null));
+        }
+
+        Set<UUID> blockedIds = blocks.getContent().stream()
+                .map(UserBlock::getBlockedId)
+                .collect(Collectors.toSet());
+        Map<UUID, UserProfile> profiles = profileRepo.findByUserIdIn(blockedIds).stream()
+                .collect(Collectors.toMap(UserProfile::getUserId, profile -> profile));
+
+        return blocks.map(block -> BlockedUserResponse.from(block, profiles.get(block.getBlockedId())));
     }
 
     @Transactional

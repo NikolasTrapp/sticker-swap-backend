@@ -1,9 +1,4 @@
 spring:
-  datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/stickerswap}
-    username: ${DB_USER:postgres}
-    password: ${DB_PASSWORD:postgres}
-    driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
       ddl-auto: none
@@ -18,6 +13,8 @@ spring:
           auth: true
           starttls:
             enable: true
+  profiles:
+    active: local
 
 springdoc:
   swagger-ui:
@@ -26,41 +23,39 @@ springdoc:
     path: /v3/api-docs
 
 management:
+  tracing:
+    sampling:
+      probability: 1.0
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,metrics,loggers,httpexchanges,prometheus
   endpoint:
     health:
       show-details: always
 
 app:
-  admin:
-    email: ${ADMIN_EMAIL:admin@stickerswap.com}
-    password: ${ADMIN_PASSWORD:changeme}
-  security:
-    issuer: ${APP_SECURITY_ISSUER:http://localhost:8080}
-    public-base-url: ${APP_PUBLIC_BASE_URL:http://localhost:8080}
-    password-reset-url: ${APP_PASSWORD_RESET_URL:http://localhost:4200/password-reset}
-    frontend-login-url: ${APP_SECURITY_FRONTEND_LOGIN_URL:http://localhost:4200/login}
-    jwk-set-json: ${APP_SECURITY_JWK_SET_JSON:}
-    jwk-set-json-file: ${APP_SECURITY_JWK_SET_JSON_FILE:.local/jwk-set.json}
-    cors:
-      allowed-origins: ${APP_SECURITY_CORS_ALLOWED_ORIGINS:http://localhost:4200,http://127.0.0.1:4200}
+  database:
+    driver-class-name: org.postgresql.Driver
+    pool-name: StickerSwapPool
+    maximum-pool-size: 20
+    minimum-idle: 5
+    connection-timeout: 30s
+    idle-timeout: 10m
+    max-lifetime: 30m
+    keep-alive-time: 5m
   oauth:
     web-client:
-      client-id: ${OAUTH_WEB_CLIENT_ID:sticker-swap-web}
-      redirect-uris: ${OAUTH_WEB_REDIRECT_URIS:http://localhost:4200/oauth/callback,http://127.0.0.1:4200/oauth/callback}
-      post-logout-redirect-uris: ${OAUTH_WEB_POST_LOGOUT_REDIRECT_URIS:http://localhost:4200,http://127.0.0.1:4200}
-  mail:
-    from: ${APP_MAIL_FROM:no-reply@stickerswap.com}
-    delivery-mode: ${APP_MAIL_DELIVERY_MODE:smtp}
+      client-id: sticker-swap-web
+  cep:
+    api-base-url: ${CEP_API_BASE_URL:https://brasilapi.com.br}
+    connect-timeout: ${CEP_API_CONNECT_TIMEOUT:3s}
+    read-timeout: ${CEP_API_READ_TIMEOUT:3s}
 
 logging:
   pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level [%X{traceId:-}] [%X{spanId:-}] [%X{userId:-anon}] %logger{36} - %msg%n"
   level:
     br.com.stickerswap: INFO
     org:
-      hibernate.SQL: DEBUG
       springframework.security: WARN

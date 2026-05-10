@@ -22,13 +22,16 @@ app:
     issuer: http://localhost:8080
     public-base-url: http://localhost:8080
     password-reset-url: http://localhost:4200/password-reset
+    frontend-login-url: http://localhost:4200/login
     jwk-set-json: ""
     jwk-set-json-file: ""
+    cors:
+      allowed-origins: http://localhost:4200,http://127.0.0.1:4200
   oauth:
     web-client:
       client-id: sticker-swap-web
       redirect-uris: http://localhost:4200/oauth/callback,http://127.0.0.1:4200/oauth/callback
-      post-logout-redirect-uris: http://localhost:4200,http://127.0.0.1:4200
+      post-logout-redirect-uris: http://localhost:4200/logged-out,http://127.0.0.1:4200/logged-out,http://localhost:4201/logged-out,http://127.0.0.1:4201/logged-out,http://localhost:4200,http://127.0.0.1:4200
 
 logging:
   level:

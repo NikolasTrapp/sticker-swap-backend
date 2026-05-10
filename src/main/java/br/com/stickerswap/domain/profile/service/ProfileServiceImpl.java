@@ -19,6 +19,7 @@ public class ProfileServiceImpl implements ProfileService {
 
     private final UserProfileRepository profileRepository;
     private final UserRepository userRepository;
+    private final CepGeocodeService cepGeocodeService;
 
     @Transactional
     @Override
@@ -35,11 +36,29 @@ public class ProfileServiceImpl implements ProfileService {
                 .orElseGet(() -> UserProfile.forUser(userId));
 
         if (req.nickname() != null)              profile.setNickname(req.nickname());
-        if (req.cep() != null)                   profile.setCep(req.cep());
-        if (req.city() != null)                  profile.setCity(req.city());
-        if (req.state() != null)                 profile.setState(req.state());
         if (req.showCityStatePublicly() != null) profile.setShowCityStatePublicly(req.showCityStatePublicly());
         if (req.useLocationForSearch() != null)  profile.setUseLocationForSearch(req.useLocationForSearch());
+
+        if (req.cep() != null) {
+            profile.setCep(req.cep());
+            // Clear stale coordinates before attempting geocoding
+            profile.setApproximateLatitude(null);
+            profile.setApproximateLongitude(null);
+
+            cepGeocodeService.resolve(req.cep()).ifPresent(loc -> {
+                profile.setApproximateLatitude(loc.latitude());
+                profile.setApproximateLongitude(loc.longitude());
+                // Fill city/state from API only when not explicitly supplied in the request
+                if (req.city() == null)  profile.setCity(loc.city());
+                if (req.state() == null) profile.setState(loc.state());
+            });
+            // Explicit values always override whatever the geocoder returned
+            if (req.city() != null)  profile.setCity(req.city());
+            if (req.state() != null) profile.setState(req.state());
+        } else {
+            if (req.city() != null)  profile.setCity(req.city());
+            if (req.state() != null) profile.setState(req.state());
+        }
 
         return MyProfileResponse.from(profileRepository.save(profile));
     }

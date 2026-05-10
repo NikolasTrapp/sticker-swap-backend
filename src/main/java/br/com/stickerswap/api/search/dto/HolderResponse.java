@@ -10,5 +10,6 @@ public record HolderResponse(
         String state,            // null when showCityStatePublicly = false
         int quantity,
         boolean isPotentialMatch,
-        LocalDateTime lastActivityAt
+        LocalDateTime lastActivityAt,
+        Double distanceKm        // null when either side has no location
 ) {}

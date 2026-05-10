@@ -1,5 +1,6 @@
 package br.com.stickerswap.domain.moderation.service;
 
+import br.com.stickerswap.api.moderation.dto.BlockedUserResponse;
 import br.com.stickerswap.api.moderation.dto.ReportRequest;
 import br.com.stickerswap.api.moderation.dto.ReportResponse;
 import br.com.stickerswap.domain.moderation.model.ReportStatus;
@@ -14,6 +15,8 @@ public interface ModerationService {
     void blockUser(UUID blockerId, UUID targetId);
 
     void unblockUser(UUID blockerId, UUID targetId);
+
+    Page<BlockedUserResponse> listBlockedUsers(UUID blockerId, Pageable pageable);
 
     ReportResponse reportUser(UUID reporterId, UUID reportedId, ReportRequest req);
 

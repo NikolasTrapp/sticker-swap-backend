@@ -1,5 +1,6 @@
 package br.com.stickerswap.api.moderation;
 
+import br.com.stickerswap.api.moderation.dto.BlockedUserResponse;
 import br.com.stickerswap.api.moderation.dto.ReportRequest;
 import br.com.stickerswap.api.moderation.dto.ReportResponse;
 import br.com.stickerswap.domain.moderation.service.ModerationService;
@@ -9,6 +10,8 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,6 +24,13 @@ import java.util.UUID;
 public class ModerationController {
 
     private final ModerationService moderationService;
+
+    @GetMapping("/me/blocked-users")
+    @Operation(summary = "List users blocked by the current user")
+    public Page<BlockedUserResponse> listBlockedUsers(Pageable pageable) {
+        UUID callerId = AuthenticatedUser.fromContext().id();
+        return moderationService.listBlockedUsers(callerId, pageable);
+    }
 
     @PutMapping("/users/{userId}/block")
     @ResponseStatus(HttpStatus.NO_CONTENT)

@@ -2,15 +2,33 @@ package br.com.stickerswap.infrastructure.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
+import java.time.Duration;
 import java.util.List;
 
 @ConfigurationProperties(prefix = "app")
 public record AppProperties(
+        DatabaseProperties database,
         SecurityProperties security,
         AdminProperties admin,
         OAuthProperties oauth,
-        MailProperties mail
+        MailProperties mail,
+        CepProperties cep
 ) {
+
+    public record DatabaseProperties(
+            String url,
+            String username,
+            String password,
+            String driverClassName,
+            String poolName,
+            int maximumPoolSize,
+            int minimumIdle,
+            Duration connectionTimeout,
+            Duration idleTimeout,
+            Duration maxLifetime,
+            Duration keepAliveTime
+    ) {}
+
     public record SecurityProperties(
             String issuer,
             String publicBaseUrl,
@@ -34,4 +52,6 @@ public record AppProperties(
     ) {}
 
     public record MailProperties(String from, String deliveryMode) {}
+
+    public record CepProperties(String apiBaseUrl, Duration connectTimeout, Duration readTimeout) {}
 }

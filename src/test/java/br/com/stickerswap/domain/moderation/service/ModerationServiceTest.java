@@ -2,14 +2,18 @@ package br.com.stickerswap.domain.moderation.service;
 
 import br.com.stickerswap.domain.moderation.model.ReportReason;
 import br.com.stickerswap.domain.moderation.model.UserBlock;
+import br.com.stickerswap.domain.profile.model.UserProfile;
 import br.com.stickerswap.infrastructure.repository.moderation.UserBlockRepository;
 import br.com.stickerswap.infrastructure.repository.moderation.UserReportRepository;
+import br.com.stickerswap.infrastructure.repository.profile.UserProfileRepository;
 import br.com.stickerswap.api.moderation.dto.ReportRequest;
 import br.com.stickerswap.api.moderation.dto.ReportResponse;
 import br.com.stickerswap.shared.error.BusinessRuleException;
 import br.com.stickerswap.shared.error.ResourceNotFoundException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -29,6 +33,7 @@ class ModerationServiceTest {
 
     @Mock UserBlockRepository blockRepo;
     @Mock UserReportRepository reportRepo;
+    @Mock UserProfileRepository profileRepo;
 
     @InjectMocks ModerationServiceImpl moderationService;
 
@@ -74,6 +79,34 @@ class ModerationServiceTest {
 
         assertThatThrownBy(() -> moderationService.unblockUser(blockerId, blockedId))
                 .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void listBlockedUsers_returnsProfilesForBlockedUsers() {
+        UUID blockerId = UUID.randomUUID();
+        UUID blockedId = UUID.randomUUID();
+
+        UserBlock block = new UserBlock();
+        block.setBlockerId(blockerId);
+        block.setBlockedId(blockedId);
+
+        UserProfile profile = UserProfile.forUser(blockedId);
+        profile.setNickname("colecionador");
+        profile.setCity("Blumenau");
+        profile.setState("SC");
+        profile.setShowCityStatePublicly(true);
+
+        when(blockRepo.findByBlockerIdOrderByCreatedAtDesc(blockerId, PageRequest.of(0, 10)))
+                .thenReturn(new PageImpl<>(List.of(block)));
+        when(profileRepo.findByUserIdIn(Set.of(blockedId))).thenReturn(List.of(profile));
+
+        var page = moderationService.listBlockedUsers(blockerId, PageRequest.of(0, 10));
+
+        assertThat(page.getContent()).hasSize(1);
+        assertThat(page.getContent().get(0).userId()).isEqualTo(blockedId);
+        assertThat(page.getContent().get(0).nickname()).isEqualTo("colecionador");
+        assertThat(page.getContent().get(0).city()).isEqualTo("Blumenau");
+        assertThat(page.getContent().get(0).state()).isEqualTo("SC");
     }
 
     @Test

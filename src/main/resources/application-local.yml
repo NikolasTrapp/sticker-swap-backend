@@ -1,9 +1,32 @@
 app:
+  database:
+    url: jdbc:postgresql://localhost:5432/stickerswap
+    username: postgres
+    password: postgres
+  admin:
+    email: admin@stickerswap.com
+    password: changeme
   security:
-    jwk-set-json-file: ${APP_SECURITY_JWK_SET_JSON_FILE:.local/jwk-set.json}
+    issuer: http://localhost:8080
+    public-base-url: http://localhost:8080
+    password-reset-url: http://localhost:4200/password-reset
+    frontend-login-url: http://localhost:4200/login
+    jwk-set-json: ""
+    jwk-set-json-file: .local/jwk-set.json
+    cors:
+      allowed-origins: http://localhost:4200,http://127.0.0.1:4200
+  oauth:
+    web-client:
+      redirect-uris: http://localhost:4200/oauth/callback,http://127.0.0.1:4200/oauth/callback
+      post-logout-redirect-uris: >-
+        http://localhost:4200/logged-out,http://127.0.0.1:4200/logged-out,
+        http://localhost:4201/logged-out,http://127.0.0.1:4201/logged-out
   mail:
+    from: no-reply@stickerswap.com
     delivery-mode: log
 
 logging:
   level:
+    org:
+      hibernate.SQL: DEBUG
     br.com.stickerswap.identity.service.AccountEmailServiceImpl: DEBUG
