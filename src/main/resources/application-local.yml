@@ -1,4 +1,6 @@
 app:
+  security:
+    jwk-set-json-file: ${APP_SECURITY_JWK_SET_JSON_FILE:.local/jwk-set.json}
   mail:
     delivery-mode: log
 

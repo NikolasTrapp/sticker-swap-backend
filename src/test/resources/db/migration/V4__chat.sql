@@ -1,5 +1,5 @@
 CREATE TABLE chat_conversations (
-    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id          UUID PRIMARY KEY,
     user_a_id   UUID NOT NULL REFERENCES users (id),
     user_b_id   UUID NOT NULL REFERENCES users (id),
     sticker_id  UUID NOT NULL REFERENCES stickers (id),
@@ -14,7 +14,7 @@ CREATE INDEX idx_chat_conversations_user_b ON chat_conversations (user_b_id);
 CREATE INDEX idx_chat_conversations_sticker ON chat_conversations (sticker_id);
 
 CREATE TABLE chat_messages (
-    id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id               UUID PRIMARY KEY,
     conversation_id  UUID NOT NULL REFERENCES chat_conversations (id),
     sender_user_id   UUID REFERENCES users (id),
     type             VARCHAR(20) NOT NULL,

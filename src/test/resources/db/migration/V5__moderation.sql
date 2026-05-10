@@ -1,5 +1,5 @@
 CREATE TABLE user_blocks (
-    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id          UUID PRIMARY KEY,
     blocker_id  UUID NOT NULL REFERENCES users (id),
     blocked_id  UUID NOT NULL REFERENCES users (id),
     created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -11,7 +11,7 @@ CREATE INDEX idx_user_blocks_blocker ON user_blocks (blocker_id);
 CREATE INDEX idx_user_blocks_blocked ON user_blocks (blocked_id);
 
 CREATE TABLE user_reports (
-    id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id           UUID PRIMARY KEY,
     reporter_id  UUID NOT NULL REFERENCES users (id),
     reported_id  UUID NOT NULL REFERENCES users (id),
     reason       VARCHAR(50) NOT NULL,

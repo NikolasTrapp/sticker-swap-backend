@@ -1,5 +1,7 @@
 package br.com.stickerswap.api.collection;
 
+import br.com.stickerswap.api.collection.dto.CollectionFilter;
+import br.com.stickerswap.api.collection.dto.CollectionStickerResponse;
 import br.com.stickerswap.api.collection.dto.RepeatedStickerResponse;
 import br.com.stickerswap.api.collection.dto.SetRepeatedStickerRequest;
 import br.com.stickerswap.api.collection.dto.WantedStickerResponse;
@@ -10,6 +12,9 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
@@ -23,6 +28,16 @@ import java.util.UUID;
 public class CollectionController {
 
     private final CollectionService collectionService;
+
+    @GetMapping("/me/albums/{albumId}/collection")
+    @Operation(summary = "List own collection state for active stickers in an album")
+    public Page<CollectionStickerResponse> listCollection(
+            @PathVariable UUID albumId,
+            @RequestParam(required = false) String q,
+            @RequestParam(defaultValue = "ALL") CollectionFilter filter,
+            @PageableDefault(size = 25, sort = "code") Pageable pageable) {
+        return collectionService.listCollection(AuthenticatedUser.fromContext().id(), albumId, q, filter, pageable);
+    }
 
     // ── Repeated ─────────────────────────────────────────────────────────────
 

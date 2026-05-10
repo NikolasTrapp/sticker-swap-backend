@@ -69,6 +69,7 @@ O fluxo atual usa Spring Authorization Server:
 - `/oauth2/token`: token endpoint.
 - `/oauth2/jwks`: JWK Set.
 - `/.well-known/oauth-authorization-server`: metadata do authorization server.
+- Tokens são RS256. Preferencialmente configure `APP_SECURITY_JWK_SET_JSON` em produção; sem ele, a chave privada é carregada/criada em `APP_SECURITY_JWK_SET_JSON_FILE` (padrão `.local/jwk-set.json`).
 
 O Resource Server valida JWTs emitidos pelo Authorization Server. O claim `role` é convertido para authority `ROLE_<role>`.
 

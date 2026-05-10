@@ -13,7 +13,7 @@ public interface AlbumService {
 
     AlbumResponse getActiveAlbum(UUID albumId);
 
-    Page<StickerResponse> listActiveStickers(UUID albumId, Pageable pageable);
+    Page<StickerResponse> listActiveStickers(UUID albumId, String query, Pageable pageable);
 
     Page<StickerResponse> listStickers(UUID albumId, Pageable pageable);
 

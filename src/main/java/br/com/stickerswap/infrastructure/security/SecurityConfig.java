@@ -1,6 +1,7 @@
 package br.com.stickerswap.infrastructure.security;
 
-import org.springframework.beans.factory.annotation.Value;
+import br.com.stickerswap.infrastructure.config.AppProperties;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -31,11 +32,11 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import java.util.Arrays;
 import java.util.List;
 
 @Configuration
 @EnableWebSecurity
+@RequiredArgsConstructor
 public class SecurityConfig {
 
     private static final String[] PUBLIC_PATHS = {
@@ -51,8 +52,7 @@ public class SecurityConfig {
             "/ws/**"   // JWT validated at STOMP CONNECT level by JwtChannelInterceptor
     };
 
-    @Value("${app.security.frontend-login-url:http://localhost:4200/login}")
-    private String frontendLoginUrl;
+    private final AppProperties appProperties;
 
     @Bean
     @Order(1)
@@ -62,6 +62,7 @@ public class SecurityConfig {
     ) {
         OAuth2AuthorizationServerConfigurer authorizationServerConfigurer = new OAuth2AuthorizationServerConfigurer();
         RequestMatcher endpointsMatcher = authorizationServerConfigurer.getEndpointsMatcher();
+        String loginUrl = appProperties.security().frontendLoginUrl();
 
         http
                 .securityMatcher(endpointsMatcher)
@@ -71,7 +72,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth.anyRequest().authenticated())
                 .csrf(AbstractHttpConfigurer::disable)
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(
-                        (request, response, authException) -> response.sendRedirect(frontendLoginUrl)))
+                        (request, response, authException) -> response.sendRedirect(loginUrl)))
                 .oauth2ResourceServer(rs -> rs.jwt(Customizer.withDefaults()))
                 .addFilterBefore(rateLimitingFilter, UsernamePasswordAuthenticationFilter.class);
 
@@ -139,11 +140,9 @@ public class SecurityConfig {
     }
 
     @Bean
-    public AuthorizationServerSettings authorizationServerSettings(
-            @Value("${app.security.issuer:http://localhost:8080}") String issuer
-    ) {
+    public AuthorizationServerSettings authorizationServerSettings() {
         return AuthorizationServerSettings.builder()
-                .issuer(issuer)
+                .issuer(appProperties.security().issuer())
                 .build();
     }
 
@@ -153,11 +152,9 @@ public class SecurityConfig {
     }
 
     @Bean
-    public CorsConfigurationSource corsConfigurationSource(
-            @Value("${app.security.cors.allowed-origins:http://localhost:4200,http://127.0.0.1:4200}") String allowedOrigins
-    ) {
+    public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(splitCsv(allowedOrigins));
+        config.setAllowedOrigins(appProperties.security().cors().allowedOrigins());
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-XSRF-TOKEN", "X-Requested-With"));
         config.setExposedHeaders(List.of("Location"));
@@ -177,12 +174,5 @@ public class SecurityConfig {
         JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
         converter.setJwtGrantedAuthoritiesConverter(grantedAuthConverter);
         return converter;
-    }
-
-    private List<String> splitCsv(String value) {
-        return Arrays.stream(value.split(","))
-                .map(String::trim)
-                .filter(item -> !item.isEmpty())
-                .toList();
     }
 }

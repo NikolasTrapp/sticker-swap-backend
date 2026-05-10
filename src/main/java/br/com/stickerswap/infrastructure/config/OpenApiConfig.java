@@ -32,7 +32,8 @@ import org.springframework.context.annotation.Configuration;
                         scopes = {
                                 @OAuthScope(name = "openid", description = "OpenID Connect"),
                                 @OAuthScope(name = "profile", description = "Profile information"),
-                                @OAuthScope(name = "api", description = "Sticker Swap API")
+                                @OAuthScope(name = "api", description = "Sticker Swap API"),
+                                @OAuthScope(name = "offline_access", description = "Refresh token access")
                         }
                 ))
         )

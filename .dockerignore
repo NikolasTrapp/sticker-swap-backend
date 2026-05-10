@@ -3,6 +3,7 @@
 .idea
 *.iml
 .vscode
+.local
 .mvn
 mvnw
 mvnw.cmd

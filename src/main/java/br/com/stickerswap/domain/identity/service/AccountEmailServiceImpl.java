@@ -1,9 +1,9 @@
 package br.com.stickerswap.domain.identity.service;
 
+import br.com.stickerswap.infrastructure.config.AppProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
@@ -15,22 +15,12 @@ import org.springframework.web.util.UriComponentsBuilder;
 public class AccountEmailServiceImpl implements AccountEmailService {
 
     private final ObjectProvider<JavaMailSender> mailSenderProvider;
-
-    @Value("${app.mail.from:no-reply@stickerswap.com}")
-    private String from;
-
-    @Value("${app.mail.delivery-mode:smtp}")
-    private String deliveryMode;
-
-    @Value("${app.security.public-base-url:http://localhost:8080}")
-    private String publicBaseUrl;
-
-    @Value("${app.security.password-reset-url:http://localhost:8080/password-reset}")
-    private String passwordResetUrl;
+    private final AppProperties appProperties;
 
     @Override
     public void sendEmailConfirmation(String email, String token) {
-        String confirmationUrl = UriComponentsBuilder.fromUriString(publicBaseUrl)
+        String confirmationUrl = UriComponentsBuilder
+                .fromUriString(appProperties.security().publicBaseUrl())
                 .path("/auth/email-confirmations/confirm")
                 .queryParam("token", token)
                 .build()
@@ -43,7 +33,8 @@ public class AccountEmailServiceImpl implements AccountEmailService {
 
     @Override
     public void sendPasswordReset(String email, String token) {
-        String resetUrl = UriComponentsBuilder.fromUriString(passwordResetUrl)
+        String resetUrl = UriComponentsBuilder
+                .fromUriString(appProperties.security().passwordResetUrl())
                 .queryParam("token", token)
                 .build()
                 .toUriString();
@@ -56,7 +47,7 @@ public class AccountEmailServiceImpl implements AccountEmailService {
     }
 
     private void send(String to, String subject, String text) {
-        if ("log".equalsIgnoreCase(deliveryMode)) {
+        if ("log".equalsIgnoreCase(appProperties.mail().deliveryMode())) {
             log.info("Mail delivery is in log mode. Email to {} with subject '{}':\n{}", to, subject, text);
             return;
         }
@@ -68,7 +59,7 @@ public class AccountEmailServiceImpl implements AccountEmailService {
         }
 
         SimpleMailMessage message = new SimpleMailMessage();
-        message.setFrom(from);
+        message.setFrom(appProperties.mail().from());
         message.setTo(to);
         message.setSubject(subject);
         message.setText(text);

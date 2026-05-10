@@ -189,7 +189,7 @@ class ChatServiceTest {
     private Sticker sticker(UUID id, String number, String name) {
         Sticker s = new Sticker();
         s.setId(id);
-        s.setNumber(number);
+        s.setCode(number);
         s.setName(name);
         return s;
     }

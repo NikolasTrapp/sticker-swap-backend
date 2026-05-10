@@ -1,0 +1,4 @@
+app:
+  security:
+    jwk-set-json: ${APP_SECURITY_JWK_SET_JSON}
+    jwk-set-json-file: ""

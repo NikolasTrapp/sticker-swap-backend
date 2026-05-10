@@ -44,6 +44,7 @@ app:
     password-reset-url: ${APP_PASSWORD_RESET_URL:http://localhost:4200/password-reset}
     frontend-login-url: ${APP_SECURITY_FRONTEND_LOGIN_URL:http://localhost:4200/login}
     jwk-set-json: ${APP_SECURITY_JWK_SET_JSON:}
+    jwk-set-json-file: ${APP_SECURITY_JWK_SET_JSON_FILE:.local/jwk-set.json}
     cors:
       allowed-origins: ${APP_SECURITY_CORS_ALLOWED_ORIGINS:http://localhost:4200,http://127.0.0.1:4200}
   oauth:

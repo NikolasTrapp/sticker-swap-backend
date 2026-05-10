@@ -88,7 +88,7 @@ All errors follow `ApiError` in `shared/error/`:
   - Backend redirects to frontend `/oauth/callback?code=…`
   - `POST /oauth2/token` exchanges the authorization code for tokens
 - Use `Authorization: Bearer <token>` in subsequent API requests.
-- Tokens are RS256 JWTs. For production, provide `APP_SECURITY_JWK_SET_JSON`; otherwise startup generates an ephemeral RSA key (key is lost on restart, invalidating all tokens).
+- Tokens are RS256 JWTs. Prefer `APP_SECURITY_JWK_SET_JSON` in production. If it is not set, the app loads or creates a private JWK Set at `APP_SECURITY_JWK_SET_JSON_FILE` (default `.local/jwk-set.json`); if that file path is disabled, startup generates an ephemeral RSA key and restart invalidates existing tokens.
 - Default admin: `admin@stickerswap.com` / `changeme` (override via `ADMIN_EMAIL`/`ADMIN_PASSWORD`)
 - JWT claims customized by `OAuthTokenCustomizerConfig`: `sub` = user UUID, `email`, `role`.
 

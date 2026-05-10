@@ -17,6 +17,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.util.UUID;
 
@@ -48,9 +49,10 @@ public class AlbumServiceImpl implements AlbumService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<StickerResponse> listActiveStickers(UUID albumId, Pageable pageable) {
+    public Page<StickerResponse> listActiveStickers(UUID albumId, String query, Pageable pageable) {
         requireActiveAlbum(albumId);
-        return stickerRepo.findByAlbumIdAndActive(albumId, true, pageable).map(mapper::toStickerResponse);
+        String normalizedQuery = StringUtils.hasText(query) ? query.trim() : null;
+        return stickerRepo.searchActiveStickers(albumId, normalizedQuery, pageable).map(mapper::toStickerResponse);
     }
 
     @Override

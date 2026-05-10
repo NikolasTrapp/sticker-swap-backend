@@ -1,5 +1,5 @@
 CREATE TABLE user_repeated_stickers (
-    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id          UUID PRIMARY KEY,
     user_id     UUID NOT NULL REFERENCES users (id),
     album_id    UUID NOT NULL REFERENCES albums (id),
     sticker_id  UUID NOT NULL REFERENCES stickers (id),
@@ -13,7 +13,7 @@ CREATE INDEX idx_repeated_user_album ON user_repeated_stickers (user_id, album_i
 CREATE INDEX idx_repeated_sticker_quantity ON user_repeated_stickers (sticker_id, quantity);
 
 CREATE TABLE user_wanted_stickers (
-    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id          UUID PRIMARY KEY,
     user_id     UUID NOT NULL REFERENCES users (id),
     album_id    UUID NOT NULL REFERENCES albums (id),
     sticker_id  UUID NOT NULL REFERENCES stickers (id),

@@ -3,13 +3,15 @@ package br.com.stickerswap.infrastructure.repository.collection;
 import br.com.stickerswap.domain.collection.model.UserRepeatedSticker;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 public interface UserRepeatedStickerRepository extends JpaRepository<UserRepeatedSticker, UUID> {
-    List<UserRepeatedSticker> findByUserIdAndAlbumId(UUID userId, UUID albumId);
+    List<UserRepeatedSticker> findAllByUserIdAndAlbumId(UUID userId, UUID albumId);
     Optional<UserRepeatedSticker> findByUserIdAndStickerId(UUID userId, UUID stickerId);
+    List<UserRepeatedSticker> findByUserIdAndStickerIdIn(UUID userId, Collection<UUID> stickerIds);
     boolean existsByUserIdAndStickerId(UUID userId, UUID stickerId);
     // Used by collection listing
     List<UserRepeatedSticker> findByUserIdAndAlbumIdAndQuantityGreaterThan(UUID userId, UUID albumId, int quantity);

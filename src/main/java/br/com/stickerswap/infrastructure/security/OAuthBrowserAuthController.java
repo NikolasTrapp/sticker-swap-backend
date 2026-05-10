@@ -2,6 +2,7 @@ package br.com.stickerswap.infrastructure.security;
 
 import br.com.stickerswap.infrastructure.repository.identity.UserRepository;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -45,7 +46,7 @@ public class OAuthBrowserAuthController {
         context.setAuthentication(authentication);
         SecurityContextHolder.setContext(context);
 
-        var session = servletRequest.getSession(true);
+        HttpSession session = servletRequest.getSession(true);
         servletRequest.changeSessionId();
         session.setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, context);
 

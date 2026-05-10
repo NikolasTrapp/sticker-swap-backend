@@ -14,6 +14,7 @@ import java.util.UUID;
 public interface UserWantedStickerRepository extends JpaRepository<UserWantedSticker, UUID> {
     List<UserWantedSticker> findByUserIdAndAlbumId(UUID userId, UUID albumId);
     Optional<UserWantedSticker> findByUserIdAndStickerId(UUID userId, UUID stickerId);
+    List<UserWantedSticker> findByUserIdAndStickerIdIn(UUID userId, Collection<UUID> stickerIds);
     boolean existsByUserIdAndStickerId(UUID userId, UUID stickerId);
 
     /** Returns user IDs (from holderIds) that want at least one sticker the searcher has repeated. */

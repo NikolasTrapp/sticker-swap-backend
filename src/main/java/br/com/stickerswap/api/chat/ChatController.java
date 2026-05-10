@@ -4,6 +4,7 @@ import br.com.stickerswap.api.chat.dto.ConversationResponse;
 import br.com.stickerswap.api.chat.dto.InterestRequest;
 import br.com.stickerswap.api.chat.dto.MessageResponse;
 import br.com.stickerswap.domain.chat.service.ChatService;
+import br.com.stickerswap.domain.notification.service.NotificationService;
 import br.com.stickerswap.shared.security.AuthenticatedUser;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -26,6 +27,7 @@ import java.util.UUID;
 public class ChatController {
 
     private final ChatService chatService;
+    private final NotificationService notificationService;
 
     @PostMapping("/stickers/{stickerId}/interest")
     @ResponseStatus(HttpStatus.CREATED)
@@ -54,5 +56,13 @@ public class ChatController {
             @PageableDefault(size = 50) Pageable pageable) {
         UUID userId = AuthenticatedUser.fromContext().id();
         return chatService.listMessages(userId, conversationId, pageable);
+    }
+
+    @PutMapping("/chats/{conversationId}/notifications/read")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Mark all notifications for this conversation as read")
+    public void markConversationNotificationsRead(@PathVariable UUID conversationId) {
+        UUID userId = AuthenticatedUser.fromContext().id();
+        notificationService.markConversationRead(userId, conversationId);
     }
 }

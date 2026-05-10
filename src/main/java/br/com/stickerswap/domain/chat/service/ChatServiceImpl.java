@@ -10,6 +10,7 @@ import br.com.stickerswap.domain.chat.model.MessageType;
 import br.com.stickerswap.infrastructure.repository.chat.ChatConversationRepository;
 import br.com.stickerswap.infrastructure.repository.chat.ChatMessageRepository;
 import br.com.stickerswap.domain.moderation.service.ModerationService;
+import br.com.stickerswap.domain.notification.service.NotificationService;
 import br.com.stickerswap.domain.profile.model.UserProfile;
 import br.com.stickerswap.infrastructure.repository.profile.UserProfileRepository;
 import br.com.stickerswap.shared.error.BusinessRuleException;
@@ -32,6 +33,7 @@ public class ChatServiceImpl implements ChatService {
     private final StickerRepository stickerRepo;
     private final UserProfileRepository profileRepo;
     private final ModerationService moderationService;
+    private final NotificationService notificationService;
 
     @Transactional
     @Override
@@ -67,6 +69,8 @@ public class ChatServiceImpl implements ChatService {
             intent.setBody("Um usuário demonstrou interesse em trocar pela figurinha " +
                            sticker.getCode() + " — " + sticker.getName() + ".");
             messageRepo.save(intent);
+
+            notificationService.notifyInterest(holderId, seekerId, conversation.getId(), stickerId);
         }
 
         UUID otherUserId = seekerId.equals(userAId) ? userBId : userAId;
@@ -131,6 +135,8 @@ public class ChatServiceImpl implements ChatService {
         // Touch updatedAt so the conversation rises to the top of listings
         conversation.setUpdatedAt(java.time.LocalDateTime.now());
         conversationRepo.save(conversation);
+
+        notificationService.notifyMessage(otherId, senderId, conversationId, conversation.getStickerId());
 
         return toMessageResponse(msg);
     }

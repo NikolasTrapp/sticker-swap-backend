@@ -8,12 +8,14 @@ import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.messaging.support.ChannelInterceptor;
 import org.springframework.messaging.support.MessageHeaderAccessor;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.UUID;
 
 @Component
@@ -37,6 +39,7 @@ public class JwtChannelInterceptor implements ChannelInterceptor {
             UUID userId = UUID.fromString(jwt.getSubject());
             rateLimiterService.consume("user:ws-connect:" + userId, 20, Duration.ofMinutes(1));
             accessor.getSessionAttributes().put("userId", userId);
+            accessor.setUser(new UsernamePasswordAuthenticationToken(userId.toString(), null, List.of()));
         }
 
         return message;

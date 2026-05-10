@@ -27,7 +27,7 @@ class OAuthAndSchemaIntegrationTest extends PostgresIntegrationTest {
         List<String> versions = jdbcTemplate.queryForList(
                 "SELECT version FROM flyway_schema_history ORDER BY installed_rank",
                 String.class);
-        assertThat(versions).containsExactly("1", "2", "3", "4", "5", "6");
+        assertThat(versions).containsExactly("1", "2", "3", "4", "5", "6", "7");
 
         Integer emailVerifiedColumnCount = jdbcTemplate.queryForObject(
                 """
@@ -44,6 +44,18 @@ class OAuthAndSchemaIntegrationTest extends PostgresIntegrationTest {
                 String.class,
                 "sticker-swap-web");
         assertThat(clientAuthenticationMethods).contains("none");
+
+        String authorizationGrantTypes = jdbcTemplate.queryForObject(
+                "SELECT authorization_grant_types FROM oauth2_registered_client WHERE client_id = ?",
+                String.class,
+                "sticker-swap-web");
+        assertThat(authorizationGrantTypes).contains("authorization_code", "refresh_token");
+
+        String scopes = jdbcTemplate.queryForObject(
+                "SELECT scopes FROM oauth2_registered_client WHERE client_id = ?",
+                String.class,
+                "sticker-swap-web");
+        assertThat(scopes).contains("openid", "profile", "api", "offline_access");
 
         String clientSettings = jdbcTemplate.queryForObject(
                 "SELECT client_settings FROM oauth2_registered_client WHERE client_id = ?",

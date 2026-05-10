@@ -1,7 +1,7 @@
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 CREATE TABLE users (
-    id                 UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id                 UUID PRIMARY KEY,
     email              VARCHAR(255) NOT NULL UNIQUE,
     password_hash      VARCHAR(255) NOT NULL,
     role               VARCHAR(20) NOT NULL DEFAULT 'USER',
@@ -18,7 +18,7 @@ CREATE INDEX idx_users_role ON users (role);
 CREATE INDEX idx_users_status ON users (status);
 
 CREATE TABLE user_profiles (
-    id                         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id                         UUID PRIMARY KEY,
     user_id                    UUID NOT NULL UNIQUE REFERENCES users (id),
     nickname                   VARCHAR(50),
     cep                        VARCHAR(9),
@@ -36,7 +36,7 @@ CREATE INDEX idx_user_profiles_user_id ON user_profiles (user_id);
 CREATE INDEX idx_user_profiles_nickname ON user_profiles (nickname);
 
 CREATE TABLE security_tokens (
-    id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id             UUID PRIMARY KEY,
     user_id        UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
     type           VARCHAR(40) NOT NULL,
     token_hash     VARCHAR(64) NOT NULL UNIQUE,

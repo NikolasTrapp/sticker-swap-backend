@@ -1,5 +1,5 @@
 CREATE TABLE albums (
-    id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id           UUID PRIMARY KEY,
     name         VARCHAR(200) NOT NULL,
     description  TEXT,
     year         INTEGER,
@@ -11,7 +11,7 @@ CREATE TABLE albums (
 CREATE INDEX idx_albums_active ON albums (active);
 
 CREATE TABLE stickers (
-    id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id           UUID PRIMARY KEY,
     album_id     UUID NOT NULL REFERENCES albums (id),
     code       VARCHAR(20) NOT NULL,
     name         VARCHAR(200) NOT NULL,

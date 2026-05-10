@@ -1,7 +1,7 @@
 package br.com.stickerswap.infrastructure.security;
 
+import br.com.stickerswap.infrastructure.config.AppProperties;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
@@ -14,9 +14,7 @@ import org.springframework.security.oauth2.server.authorization.settings.TokenSe
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
-import java.util.Arrays;
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -25,45 +23,61 @@ import java.util.UUID;
 public class OAuthClientSeeder implements ApplicationRunner {
 
     private final RegisteredClientRepository registeredClientRepository;
-
-    @Value("${app.oauth.web-client.client-id:sticker-swap-web}")
-    private String clientId;
-
-    @Value("${app.oauth.web-client.redirect-uris:http://localhost:4200/oauth/callback,http://127.0.0.1:4200/oauth/callback}")
-    private String redirectUris;
-
-    @Value("${app.oauth.web-client.post-logout-redirect-uris:http://localhost:4200,http://127.0.0.1:4200}")
-    private String postLogoutRedirectUris;
+    private final AppProperties appProperties;
 
     @Override
     public void run(ApplicationArguments args) {
-        Set<String> configuredRedirectUris = new LinkedHashSet<>(splitCsv(redirectUris));
-        Set<String> configuredPostLogoutUris = new LinkedHashSet<>(splitCsv(postLogoutRedirectUris));
+        AppProperties.WebClientProperties wc = appProperties.oauth().webClient();
+        Set<String> redirectUris = new LinkedHashSet<>(wc.redirectUris());
+        Set<String> postLogoutUris = new LinkedHashSet<>(wc.postLogoutRedirectUris());
 
-        RegisteredClient existing = registeredClientRepository.findByClientId(clientId);
+        RegisteredClient existing = registeredClientRepository.findByClientId(wc.clientId());
 
         if (existing != null) {
-            if (existing.getRedirectUris().equals(configuredRedirectUris)
-                    && existing.getPostLogoutRedirectUris().equals(configuredPostLogoutUris)) {
-                return;
-            }
             registeredClientRepository.save(
-                    RegisteredClient.from(existing)
-                            .redirectUris(uris -> { uris.clear(); uris.addAll(configuredRedirectUris); })
-                            .postLogoutRedirectUris(uris -> { uris.clear(); uris.addAll(configuredPostLogoutUris); })
-                            .build());
+                    configureWebClient(RegisteredClient.from(existing), redirectUris, postLogoutUris).build());
             return;
         }
 
-        RegisteredClient.Builder builder = RegisteredClient.withId(UUID.randomUUID().toString())
-                .clientId(clientId)
+        registeredClientRepository.save(
+                configureWebClient(
+                        RegisteredClient.withId(UUID.randomUUID().toString()).clientId(wc.clientId()),
+                        redirectUris,
+                        postLogoutUris
+                ).build());
+    }
+
+    private RegisteredClient.Builder configureWebClient(
+            RegisteredClient.Builder builder,
+            Set<String> redirectUris,
+            Set<String> postLogoutUris
+    ) {
+        return builder
                 .clientName("Sticker Swap Web")
-                .clientAuthenticationMethod(ClientAuthenticationMethod.NONE)
-                .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
-                .authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN)
-                .scope(OidcScopes.OPENID)
-                .scope(OidcScopes.PROFILE)
-                .scope("api")
+                .clientAuthenticationMethods(methods -> {
+                    methods.clear();
+                    methods.add(ClientAuthenticationMethod.NONE);
+                })
+                .authorizationGrantTypes(grantTypes -> {
+                    grantTypes.clear();
+                    grantTypes.add(AuthorizationGrantType.AUTHORIZATION_CODE);
+                    grantTypes.add(AuthorizationGrantType.REFRESH_TOKEN);
+                })
+                .redirectUris(uris -> {
+                    uris.clear();
+                    uris.addAll(redirectUris);
+                })
+                .postLogoutRedirectUris(uris -> {
+                    uris.clear();
+                    uris.addAll(postLogoutUris);
+                })
+                .scopes(scopes -> {
+                    scopes.clear();
+                    scopes.add(OidcScopes.OPENID);
+                    scopes.add(OidcScopes.PROFILE);
+                    scopes.add("api");
+                    scopes.add("offline_access");
+                })
                 .clientSettings(ClientSettings.builder()
                         .requireProofKey(true)
                         .requireAuthorizationConsent(false)
@@ -73,16 +87,5 @@ public class OAuthClientSeeder implements ApplicationRunner {
                         .refreshTokenTimeToLive(Duration.ofDays(30))
                         .reuseRefreshTokens(false)
                         .build());
-
-        configuredRedirectUris.forEach(builder::redirectUri);
-        configuredPostLogoutUris.forEach(builder::postLogoutRedirectUri);
-        registeredClientRepository.save(builder.build());
-    }
-
-    private List<String> splitCsv(String value) {
-        return Arrays.stream(value.split(","))
-                .map(String::trim)
-                .filter(item -> !item.isEmpty())
-                .toList();
     }
 }

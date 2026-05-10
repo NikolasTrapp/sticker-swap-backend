@@ -1,4 +1,5 @@
 HELP.md
+.local/
 
 ### Gradle ###
 build/
