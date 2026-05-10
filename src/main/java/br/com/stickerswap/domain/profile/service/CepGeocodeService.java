@@ -41,28 +41,32 @@ public class CepGeocodeService {
 
     public Optional<CepLocation> resolve(String rawCep) {
         String digits = rawCep.replaceAll("\\D", "");
+        if (digits.length() != 8) {
+            return Optional.empty();
+        }
         try {
             CepApiResponse resp = restClient.get()
                     .uri("/api/cep/v2/{cep}", digits)
                     .retrieve()
                     .body(CepApiResponse.class);
 
-            if (resp == null
-                    || resp.location() == null
-                    || resp.location().coordinates() == null
-                    || resp.location().coordinates().latitude() == null
-                    || resp.location().coordinates().longitude() == null) {
+            if (resp == null || isBlank(resp.city()) || isBlank(resp.state())) {
                 return Optional.empty();
             }
 
+            CoordinatesWrapper coordinates = resp.location() != null ? resp.location().coordinates() : null;
             return Optional.of(new CepLocation(
                     resp.city(),
                     resp.state(),
-                    resp.location().coordinates().latitude(),
-                    resp.location().coordinates().longitude()));
+                    coordinates != null ? coordinates.latitude() : null,
+                    coordinates != null ? coordinates.longitude() : null));
         } catch (Exception e) {
             log.warn("CEP geocoding failed for '{}': {}", digits, e.getMessage());
             return Optional.empty();
         }
+    }
+
+    private static boolean isBlank(String value) {
+        return value == null || value.isBlank();
     }
 }

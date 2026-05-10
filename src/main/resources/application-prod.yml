@@ -29,3 +29,12 @@ app:
   mail:
     from: ${APP_MAIL_FROM}
     delivery-mode: smtp
+
+management:
+  endpoint:
+    health:
+      show-details: when_authorized
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus

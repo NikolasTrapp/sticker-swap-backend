@@ -1,5 +1,6 @@
 package br.com.stickerswap.api.profile;
 
+import br.com.stickerswap.api.profile.dto.CepLookupResponse;
 import br.com.stickerswap.api.profile.dto.MyProfileResponse;
 import br.com.stickerswap.api.profile.dto.PublicProfileResponse;
 import br.com.stickerswap.api.profile.dto.UpdateProfileRequest;
@@ -9,7 +10,9 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Pattern;
 import lombok.RequiredArgsConstructor;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -17,6 +20,7 @@ import java.util.UUID;
 @RestController
 @Tag(name = "Profile", description = "User profile management")
 @RequiredArgsConstructor
+@Validated
 public class ProfileController {
 
     private final ProfileService profileService;
@@ -33,6 +37,16 @@ public class ProfileController {
     @SecurityRequirement(name = "bearerAuth")
     public MyProfileResponse updateMyProfile(@Valid @RequestBody UpdateProfileRequest request) {
         return profileService.updateMyProfile(AuthenticatedUser.fromContext().id(), request);
+    }
+
+    @GetMapping("/ceps/{cep}")
+    @Operation(summary = "Lookup a Brazilian ZIP code")
+    @SecurityRequirement(name = "bearerAuth")
+    public CepLookupResponse lookupCep(
+            @PathVariable
+            @Pattern(regexp = "\\d{5}-?\\d{3}", message = "must be a valid Brazilian ZIP code (e.g. 01310-100)")
+            String cep) {
+        return profileService.lookupCep(cep);
     }
 
     @GetMapping("/users/{userId}/profile")

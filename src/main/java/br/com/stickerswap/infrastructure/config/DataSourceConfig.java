@@ -2,11 +2,13 @@ package br.com.stickerswap.infrastructure.config;
 
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import javax.sql.DataSource;
 
+@Slf4j
 @Configuration
 public class DataSourceConfig {
 
@@ -19,6 +21,7 @@ public class DataSourceConfig {
     @Bean
     public DataSource dataSource() {
         HikariConfig config = new HikariConfig();
+        log.info("Connecting to database: {}", db.url());
         config.setJdbcUrl(db.url());
         config.setUsername(db.username());
         config.setPassword(db.password());

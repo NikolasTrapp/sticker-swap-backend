@@ -19,9 +19,7 @@ app:
     web-client:
       redirect-uris: http://localhost:4200/oauth/callback,http://127.0.0.1:4200/oauth/callback
       post-logout-redirect-uris: >-
-        http://localhost:4200/logged-out,http://127.0.0.1:4200/logged-out,
-        http://localhost:4201/logged-out,http://127.0.0.1:4201/logged-out
-  mail:
+        http://localhost:4200/logged-out,http://127.0.0.1:4200/logged-out  mail:
     from: no-reply@stickerswap.com
     delivery-mode: log
 

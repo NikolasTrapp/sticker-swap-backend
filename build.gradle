@@ -92,8 +92,12 @@ jib {
         image = 'eclipse-temurin:25-jre-alpine'
     }
     to {
-        image = 'sticker-swap-backend'
+        image = 'nikolastrapp/sticker-swap-backend'
         tags = ['latest', version]
+        auth {
+            username = System.getenv('DOCKER_HUB_USERNAME') ?: ''
+            password = System.getenv('DOCKER_HUB_TOKEN') ?: ''
+        }
     }
     container {
         mainClass = 'br.com.stickerswap.StickerSwapBackendApplication'

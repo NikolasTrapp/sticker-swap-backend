@@ -20,7 +20,9 @@ import java.util.UUID;
 @Repository
 public class HolderSearchRepositoryImpl implements HolderSearchRepository {
 
-    // CTE-based query. Slots (in order): distance_km expression, match predicate, exclude clause.
+    // CTE-based query. Slots (in order): no_loc expression, distance_km expression, match predicate, exclude clause.
+    // When the searcher has no coordinates, no_loc is forced to 0 so that holders are not
+    // artificially promoted based on having coordinates — ordering falls purely to match/quantity/activity.
     private static final String DATA_SQL_TPL = """
             WITH h AS (
                 SELECT
@@ -30,9 +32,7 @@ public class HolderSearchRepositoryImpl implements HolderSearchRepository {
                     CASE WHEN up.show_city_state_publicly THEN up.state END AS state,
                     urs.quantity,
                     u.last_activity_at,
-                    CASE WHEN up.approximate_latitude IS NULL
-                              OR up.use_location_for_search = FALSE
-                         THEN 1 ELSE 0 END                                             AS no_loc,
+                    %s                                                                 AS no_loc,
                     %s                                                                 AS distance_km,
                     CASE WHEN %s THEN 0 ELSE 1 END                                     AS no_match,
                     CASE WHEN u.last_activity_at IS NULL THEN 1 ELSE 0 END             AS no_activity
@@ -118,11 +118,17 @@ public class HolderSearchRepositoryImpl implements HolderSearchRepository {
     private List<HolderResponse> fetchPage(Session session, HolderSearchCriteria c,
                                             Pageable pageable,
                                             boolean hasLoc, boolean hasExcluded, boolean hasSearcherStickers) {
+        String noLocExpr = hasLoc
+                ? "CASE WHEN up.approximate_latitude IS NULL"
+                    + " OR up.approximate_longitude IS NULL"
+                    + " OR up.use_location_for_search = FALSE"
+                    + " THEN 1 ELSE 0 END"
+                : "0";
         String distExpr = hasLoc ? HAVERSINE_EXPR : "NULL";
         String matchPredicate = hasSearcherStickers ? MATCH_EXISTS : "FALSE";
         String excludeClause = hasExcluded ? "AND urs.user_id NOT IN (:excludedIds)" : "";
 
-        String sql = String.format(DATA_SQL_TPL, distExpr, matchPredicate, excludeClause);
+        String sql = String.format(DATA_SQL_TPL, noLocExpr, distExpr, matchPredicate, excludeClause);
 
         NativeQuery<Tuple> q = session.createNativeQuery(sql, Tuple.class);
         q.setParameter("albumId", c.albumId());
