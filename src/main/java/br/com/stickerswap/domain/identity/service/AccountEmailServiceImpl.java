@@ -1,20 +1,16 @@
 package br.com.stickerswap.domain.identity.service;
 
 import br.com.stickerswap.infrastructure.config.AppProperties;
+import br.com.stickerswap.shared.mail.MailProvider;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 import org.springframework.web.util.UriComponentsBuilder;
 
 @Service
 @RequiredArgsConstructor
-@Slf4j
 public class AccountEmailServiceImpl implements AccountEmailService {
 
-    private final ObjectProvider<JavaMailSender> mailSenderProvider;
+    private final MailProvider mailProvider;
     private final AppProperties appProperties;
 
     @Override
@@ -26,7 +22,7 @@ public class AccountEmailServiceImpl implements AccountEmailService {
                 .build()
                 .toUriString();
 
-        send(email, "Confirm your Sticker Swap email",
+        mailProvider.send(email, "Confirm your Sticker Swap email",
                 "Confirm your email by opening this link:\n\n" + confirmationUrl + "\n\n"
                         + "This link expires soon. If you did not create a Sticker Swap account, ignore this email.");
     }
@@ -39,30 +35,10 @@ public class AccountEmailServiceImpl implements AccountEmailService {
                 .build()
                 .toUriString();
 
-        send(email, "Reset your Sticker Swap password",
+        mailProvider.send(email, "Reset your Sticker Swap password",
                 "Reset your password using this link:\n\n" + resetUrl + "\n\n"
                         + "If the frontend is not available yet, use this token with the password reset API:\n\n"
                         + token + "\n\n"
                         + "If you did not request this, ignore this email.");
-    }
-
-    private void send(String to, String subject, String text) {
-        if ("log".equalsIgnoreCase(appProperties.mail().deliveryMode())) {
-            log.info("Mail delivery is in log mode. Email to {} with subject '{}':\n{}", to, subject, text);
-            return;
-        }
-
-        JavaMailSender mailSender = mailSenderProvider.getIfAvailable();
-        if (mailSender == null) {
-            log.warn("Mail sender is not configured. Email to {} with subject '{}':\n{}", to, subject, text);
-            return;
-        }
-
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setFrom(appProperties.mail().from());
-        message.setTo(to);
-        message.setSubject(subject);
-        message.setText(text);
-        mailSender.send(message);
     }
 }

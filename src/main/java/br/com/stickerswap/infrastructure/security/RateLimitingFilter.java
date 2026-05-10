@@ -68,7 +68,7 @@ public class RateLimitingFilter extends OncePerRequestFilter {
             return;
         }
 
-        if ("POST".equals(method) && ("/login".equals(path) || "/oauth2/login".equals(path))) {
+        if ("POST".equals(method) && "/login".equals(path)) {
             rateLimiterService.consume("ip:login:" + ip, 10, Duration.ofMinutes(1));
             return;
         }

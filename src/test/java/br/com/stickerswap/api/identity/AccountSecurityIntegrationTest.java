@@ -2,8 +2,6 @@ package br.com.stickerswap.api.identity;
 
 import br.com.stickerswap.domain.identity.service.AccountEmailService;
 import br.com.stickerswap.support.PostgresIntegrationTest;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.json.JsonMapper;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +23,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.reset;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -36,35 +35,24 @@ class AccountSecurityIntegrationTest extends PostgresIntegrationTest {
 
     @Autowired MockMvc mockMvc;
     @Autowired JdbcTemplate jdbcTemplate;
-    ObjectMapper objectMapper = JsonMapper.builder().findAndAddModules().build();
 
     @MockitoBean
     AccountEmailService accountEmailService;
 
     @Test
-    void oauthBrowserLogin_createsAuthenticatedSessionAfterCsrfValidation() throws Exception {
-        String email = "oauth-" + UUID.randomUUID() + "@example.com";
+    void formLogin_createsAuthenticatedSessionAndUpdatesLastActivity() throws Exception {
+        String email = "form-login-" + UUID.randomUUID() + "@example.com";
         String confirmationToken = registerUserAndCaptureConfirmation(email);
 
         mockMvc.perform(get("/auth/email-confirmations/confirm")
                         .param("token", confirmationToken))
                 .andExpect(status().isOk());
 
-        MvcResult csrfResult = mockMvc.perform(get("/oauth2/csrf"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.token").isString())
-                .andReturn();
-        String csrfToken = objectMapper.readTree(csrfResult.getResponse().getContentAsString())
-                .get("token")
-                .asText();
-        MvcResult loginResult = mockMvc.perform(post("/oauth2/login")
-                        .cookie(csrfResult.getResponse().getCookies())
-                        .header("X-XSRF-TOKEN", csrfToken)
-                        .contentType(APPLICATION_JSON)
-                        .content("""
-                                {"email":"%s","password":"secret123"}
-                                """.formatted(email)))
-                .andExpect(status().isNoContent())
+        MvcResult loginResult = mockMvc.perform(post("/login")
+                        .with(csrf())
+                        .param("username", email)
+                        .param("password", "secret123"))
+                .andExpect(status().is3xxRedirection())
                 .andReturn();
 
         MockHttpSession session = (MockHttpSession) loginResult.getRequest().getSession(false);

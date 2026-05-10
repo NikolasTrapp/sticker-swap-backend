@@ -9,13 +9,6 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
-  mail:
-    properties:
-      mail:
-        smtp:
-          auth: true
-          starttls:
-            enable: true
   profiles:
     active: local
 

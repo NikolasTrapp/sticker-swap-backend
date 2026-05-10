@@ -51,7 +51,7 @@ public record AppProperties(
             List<String> postLogoutRedirectUris
     ) {}
 
-    public record MailProperties(String from, String deliveryMode) {}
+    public record MailProperties(String from, String deliveryMode, String apiKey) {}
 
     public record CepProperties(String apiBaseUrl, Duration connectTimeout, Duration readTimeout) {}
 }
