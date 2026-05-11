@@ -4,15 +4,14 @@ import br.com.stickerswap.api.notification.dto.NotificationResponse;
 import br.com.stickerswap.domain.album.model.Sticker;
 import br.com.stickerswap.domain.notification.event.NotificationCreatedEvent;
 import br.com.stickerswap.domain.notification.model.Notification;
-import br.com.stickerswap.domain.notification.model.NotificationType;
 import br.com.stickerswap.domain.profile.model.UserProfile;
 import br.com.stickerswap.infrastructure.repository.album.StickerRepository;
 import br.com.stickerswap.infrastructure.repository.notification.NotificationRepository;
 import br.com.stickerswap.infrastructure.repository.profile.UserProfileRepository;
 import br.com.stickerswap.shared.error.ResourceNotFoundException;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -21,11 +20,13 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -106,11 +107,11 @@ class NotificationServiceTest {
         Notification n = new Notification();
         n.setActorUserId(actorId);
         n.setStickerId(stickerId);
-        
+
         UserProfile actorProfile = new UserProfile();
         actorProfile.setUserId(actorId);
         actorProfile.setNickname("Actor");
-        
+
         Sticker sticker = new Sticker();
         sticker.setId(stickerId);
         sticker.setCode("001");
@@ -125,5 +126,56 @@ class NotificationServiceTest {
         assertThat(result).hasSize(1);
         assertThat(result.get(0).actorNickname()).isEqualTo("Actor");
         assertThat(result.get(0).stickerCode()).isEqualTo("001");
+    }
+
+    @Test
+    @DisplayName("dado lista vazia, quando listRecent(), então retorna lista vazia sem acessar repositórios de perfil/sticker")
+    void givenEmptyNotifications_whenListRecent_thenReturnsEmptyList() {
+        // Arrange
+        when(notificationRepo.findTop30ByRecipientUserIdOrderByCreatedAtDesc(recipientId))
+                .thenReturn(List.of());
+
+        // Act
+        List<NotificationResponse> result = notificationService.listRecent(recipientId);
+
+        // Assert
+        assertThat(result).isEmpty();
+        verify(profileRepo, never()).findByUserIdIn(any());
+    }
+
+    @Test
+    @DisplayName("dado notificação com actorId e stickerId nulos, quando listRecent(), então trata nulos corretamente")
+    void givenNotificationWithNullActorAndSticker_whenListRecent_thenHandlesNullsGracefully() {
+        // Arrange
+        Notification n = new Notification();
+        n.setActorUserId(null);
+        n.setStickerId(null);
+
+        when(notificationRepo.findTop30ByRecipientUserIdOrderByCreatedAtDesc(recipientId))
+                .thenReturn(List.of(n));
+        when(profileRepo.findByUserIdIn(anySet())).thenReturn(List.of());
+        when(stickerRepo.findAllById(anySet())).thenReturn(List.of());
+
+        // Act
+        List<NotificationResponse> result = notificationService.listRecent(recipientId);
+
+        // Assert
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).actorNickname()).isNull();
+        assertThat(result.get(0).stickerCode()).isNull();
+        assertThat(result.get(0).stickerName()).isNull();
+    }
+
+    @Test
+    @DisplayName("dado countUnread, quando invocado, então delega ao repositório")
+    void givenCountUnread_whenInvoked_thenDelegatesToRepository() {
+        // Arrange
+        when(notificationRepo.countByRecipientUserIdAndReadFalse(recipientId)).thenReturn(7L);
+
+        // Act
+        long count = notificationService.countUnread(recipientId);
+
+        // Assert
+        assertThat(count).isEqualTo(7L);
     }
 }

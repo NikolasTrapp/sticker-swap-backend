@@ -4,6 +4,8 @@ plugins {
     id 'java'
     id 'org.springframework.boot' version '4.0.4'
     id 'com.google.cloud.tools.jib' version '3.5.3'
+    id 'jacoco'
+    id 'org.sonarqube' version '5.1.0.4882'
 }
 
 group = 'br.com.stickerswap'
@@ -14,6 +16,12 @@ java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(25)
     }
+}
+
+test {
+    useJUnitPlatform()
+
+    finalizedBy jacocoTestReport
 }
 
 repositories {
@@ -94,7 +102,7 @@ jib {
     }
     to {
         image = 'nikolastrapp/sticker-swap-backend'
-        tags = ['latest', version]
+        tags = [System.getenv('IMAGE_TAG'), 'latest'].findAll { it }
         auth {
             username = System.getenv('DOCKER_HUB_USERNAME') ?: ''
             password = System.getenv('DOCKER_HUB_TOKEN') ?: ''
@@ -114,3 +122,87 @@ jib {
         ]
     }
 }
+
+jacoco {
+    toolVersion = '0.8.14'
+}
+
+def jacocoExclusions = [
+    '**/mapper/*Impl.class',
+    '**/StickerSwapBackendApplication.class',
+    '**/BrevoMailProvider$*.class',
+    '**/ResendMailProvider$*.class',
+    '**/CepGeocodeService$CepApiResponse.class',
+    '**/CepGeocodeService$CoordinatesWrapper.class',
+    '**/CepGeocodeService$LocationWrapper.class'
+]
+
+jacocoTestReport {
+    dependsOn test
+
+    reports {
+        xml.required = true
+        html.required = true
+        csv.required = false
+    }
+
+    afterEvaluate {
+        classDirectories.setFrom(files(classDirectories.files.collect {
+            fileTree(dir: it, exclude: jacocoExclusions)
+        }))
+    }
+}
+
+jacocoTestCoverageVerification {
+    dependsOn jacocoTestReport
+
+    afterEvaluate {
+        classDirectories.setFrom(files(classDirectories.files.collect {
+            fileTree(dir: it, exclude: jacocoExclusions)
+        }))
+    }
+
+    violationRules {
+        rule {
+            element = 'BUNDLE'
+
+            limit {
+                counter = 'LINE'
+                value = 'COVEREDRATIO'
+                minimum = 0.80
+            }
+
+            limit {
+                counter = 'BRANCH'
+                value = 'COVEREDRATIO'
+                minimum = 0.70
+            }
+
+            limit {
+                counter = 'CLASS'
+                value = 'MISSEDCOUNT'
+                maximum = 0
+            }
+        }
+    }
+}
+
+check {
+    dependsOn jacocoTestCoverageVerification
+}
+
+sonar {
+    properties {
+        property 'sonar.projectKey', 'nikolastrapp_sticker-swap-backend'
+        property 'sonar.organization', 'nikolastrapp'
+        property 'sonar.host.url', 'https://sonarcloud.io'
+        property 'sonar.coverage.jacoco.xmlReportPaths', 'build/reports/jacoco/test/jacocoTestReport.xml'
+        property 'sonar.java.source', '25'
+        property 'sonar.exclusions', [
+            '**/StickerSwapBackendApplication.java',
+            '**/mapper/*Impl.java'
+        ].join(',')
+    }
+}
+
+tasks.named('sonar') { dependsOn jacocoTestReport }

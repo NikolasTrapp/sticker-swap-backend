@@ -24,7 +24,6 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -120,6 +119,53 @@ class AuthServiceTest {
 
         verify(rateLimiterService).consume(eq("email:password-reset:missing@example.com"), eq(3), any(Duration.class));
         verifyNoInteractions(accountEmailService);
+    }
+
+    @Test
+    void resendEmailConfirmation_isNoopForAlreadyVerifiedUserButStillRateLimited() {
+        User user = new User();
+        user.setEmail("verified@example.com");
+        user.setStatus(UserStatus.ACTIVE);
+        user.setEmailVerified(true);
+        when(userRepository.findByEmail("verified@example.com")).thenReturn(Optional.of(user));
+
+        authService.resendEmailConfirmation("verified@example.com");
+
+        verify(rateLimiterService).consume(eq("email:confirmation:verified@example.com"), eq(3), any(Duration.class));
+        verifyNoInteractions(accountEmailService);
+    }
+
+    @Test
+    void resendEmailConfirmation_createsTokenAndSendsEmail_whenUserIsUnverified() {
+        User user = new User();
+        user.setEmail("unverified@example.com");
+        user.setStatus(UserStatus.ACTIVE);
+        user.setEmailVerified(false);
+        when(userRepository.findByEmail("unverified@example.com")).thenReturn(Optional.of(user));
+        when(securityTokenService.createToken(any(), eq(SecurityTokenType.EMAIL_CONFIRMATION), any(Duration.class)))
+                .thenReturn("resend-token");
+
+        authService.resendEmailConfirmation("unverified@example.com");
+
+        verify(rateLimiterService).consume(eq("email:confirmation:unverified@example.com"), eq(3), any(Duration.class));
+        verify(accountEmailService).sendEmailConfirmation("unverified@example.com", "resend-token");
+    }
+
+    @Test
+    void confirmEmail_isIdempotentWhenAlreadyVerified() {
+        User user = new User();
+        user.setEmail("user@example.com");
+        user.setStatus(UserStatus.ACTIVE);
+        user.setEmailVerified(true);
+
+        SecurityToken token = new SecurityToken();
+        token.setUser(user);
+        when(securityTokenService.consumeToken("raw-token", SecurityTokenType.EMAIL_CONFIRMATION)).thenReturn(token);
+
+        User result = authService.confirmEmail("raw-token");
+
+        assertThat(result.isEmailVerified()).isTrue();
+        verify(userRepository, never()).save(any());
     }
 
     @Test

@@ -15,8 +15,6 @@ public interface NotificationRepository extends JpaRepository<Notification, UUID
 
     long countByRecipientUserIdAndReadFalse(UUID recipientUserId);
 
-    List<Notification> findByRecipientUserIdAndConversationId(UUID recipientUserId, UUID conversationId);
-
     @Modifying
     @Query("UPDATE Notification n SET n.read = true WHERE n.recipientUserId = :userId")
     void markAllReadByRecipient(@Param("userId") UUID userId);

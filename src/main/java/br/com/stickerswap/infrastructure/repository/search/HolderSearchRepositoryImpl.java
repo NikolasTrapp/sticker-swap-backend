@@ -166,9 +166,10 @@ public class HolderSearchRepositoryImpl implements HolderSearchRepository {
     }
 
     private LocalDateTime toLocalDateTime(Object val) {
-        if (val == null) return null;
-        if (val instanceof LocalDateTime ldt) return ldt;
-        if (val instanceof java.sql.Timestamp ts) return ts.toLocalDateTime();
-        return null;
+        return switch (val) {
+            case LocalDateTime ldt -> ldt;
+            case java.sql.Timestamp ts -> ts.toLocalDateTime();
+            case null, default -> null;
+        };
     }
 }
