@@ -4,6 +4,7 @@ import br.com.stickerswap.api.collection.dto.CollectionFilter;
 import br.com.stickerswap.api.collection.dto.CollectionStickerResponse;
 import br.com.stickerswap.api.collection.dto.RepeatedStickerResponse;
 import br.com.stickerswap.api.collection.dto.SetRepeatedStickerRequest;
+import br.com.stickerswap.api.collection.dto.WantedStickerResponse;
 import br.com.stickerswap.domain.album.model.Album;
 import br.com.stickerswap.domain.album.model.Sticker;
 import br.com.stickerswap.domain.collection.model.UserRepeatedSticker;
@@ -197,6 +198,112 @@ class CollectionServiceTest {
 
         // Assert
         verify(repeatedRepo).delete(entry);
+    }
+
+    // ── listRepeated ──────────────────────────────────────────────────────────
+
+    @Test
+    @DisplayName("dado álbum ativo com repetida também desejada, quando listar repetidas, então retorna aviso de conflito")
+    void givenRepeatedStickerAlsoWanted_whenListRepeated_thenReturnsConflictWarning() {
+        // Arrange
+        givenAlbumIsActive();
+        when(repeatedRepo.findAllByUserIdAndAlbumId(userId, albumId)).thenReturn(List.of(repeated(2)));
+        when(wantedRepo.findByUserIdAndAlbumId(userId, albumId)).thenReturn(List.of(wanted()));
+        givenStickerIsActive();
+
+        // Act
+        List<RepeatedStickerResponse> result = collectionService.listRepeated(userId, albumId);
+
+        // Assert
+        assertThat(result).hasSize(1);
+        assertThat(result.getFirst().quantity()).isEqualTo(2);
+        assertThat(result.getFirst().warning()).contains("repetida e desejada");
+    }
+
+    // ── Wanted ────────────────────────────────────────────────────────────────
+
+    @Test
+    @DisplayName("dado álbum ativo com desejada também repetida, quando listar desejadas, então retorna aviso de conflito")
+    void givenWantedStickerAlsoRepeated_whenListWanted_thenReturnsConflictWarning() {
+        // Arrange
+        givenAlbumIsActive();
+        when(wantedRepo.findByUserIdAndAlbumId(userId, albumId)).thenReturn(List.of(wanted()));
+        when(repeatedRepo.findAllByUserIdAndAlbumId(userId, albumId)).thenReturn(List.of(repeated(1)));
+        givenStickerIsActive();
+
+        // Act
+        List<WantedStickerResponse> result = collectionService.listWanted(userId, albumId);
+
+        // Assert
+        assertThat(result).hasSize(1);
+        assertThat(result.getFirst().stickerId()).isEqualTo(stickerId);
+        assertThat(result.getFirst().warning()).contains("repetida e desejada");
+    }
+
+    @Test
+    @DisplayName("dada desejada inexistente, quando registrar desejada, então cria nova entrada")
+    void givenNoExistingWanted_whenSetWanted_thenCreatesNewEntry() {
+        // Arrange
+        givenStickerIsActive();
+        givenAlbumIsActive();
+        when(wantedRepo.findByUserIdAndStickerId(userId, stickerId)).thenReturn(Optional.empty());
+        when(wantedRepo.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(repeatedRepo.existsByUserIdAndStickerId(userId, stickerId)).thenReturn(false);
+
+        // Act
+        WantedStickerResponse response = collectionService.setWanted(userId, stickerId);
+
+        // Assert
+        assertThat(response.stickerId()).isEqualTo(stickerId);
+        assertThat(response.warning()).isNull();
+        verify(wantedRepo).save(argThat(e -> userId.equals(e.getUserId())
+                && albumId.equals(e.getAlbumId())
+                && stickerId.equals(e.getStickerId())));
+    }
+
+    @Test
+    @DisplayName("dada desejada existente e repetida, quando registrar desejada, então mantém entrada e sinaliza conflito")
+    void givenExistingWantedAndRepeated_whenSetWanted_thenSignalsConflict() {
+        // Arrange
+        givenStickerIsActive();
+        givenAlbumIsActive();
+        UserWantedSticker existing = wanted();
+        when(wantedRepo.findByUserIdAndStickerId(userId, stickerId)).thenReturn(Optional.of(existing));
+        when(wantedRepo.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(repeatedRepo.existsByUserIdAndStickerId(userId, stickerId)).thenReturn(true);
+
+        // Act
+        WantedStickerResponse response = collectionService.setWanted(userId, stickerId);
+
+        // Assert
+        assertThat(response.warning()).contains("repetida e desejada");
+        verify(wantedRepo).save(existing);
+    }
+
+    @Test
+    @DisplayName("dada desejada inexistente, quando remover desejada, então lança ResourceNotFoundException sem deletar")
+    void givenWantedNotFound_whenDeleteWanted_thenThrowsNotFound() {
+        // Arrange
+        when(wantedRepo.findByUserIdAndStickerId(userId, stickerId)).thenReturn(Optional.empty());
+
+        // Act & Assert
+        assertThatThrownBy(() -> collectionService.deleteWanted(userId, stickerId))
+                .isInstanceOf(ResourceNotFoundException.class);
+        verify(wantedRepo, never()).delete(any());
+    }
+
+    @Test
+    @DisplayName("dada desejada existente, quando remover desejada, então deleta exatamente essa entrada")
+    void givenWantedExists_whenDeleteWanted_thenDeletesExactEntry() {
+        // Arrange
+        UserWantedSticker entry = wanted();
+        when(wantedRepo.findByUserIdAndStickerId(userId, stickerId)).thenReturn(Optional.of(entry));
+
+        // Act
+        collectionService.deleteWanted(userId, stickerId);
+
+        // Assert
+        verify(wantedRepo).delete(entry);
     }
 
     // ── helpers ───────────────────────────────────────────────────────────────

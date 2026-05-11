@@ -9,6 +9,7 @@ import br.com.stickerswap.infrastructure.repository.album.StickerRepository;
 import br.com.stickerswap.shared.error.BusinessRuleException;
 import br.com.stickerswap.shared.error.ResourceNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -124,6 +125,42 @@ class AlbumServiceTest {
     }
 
     @Test
+    @DisplayName("dado álbum ativo e query com espaços, quando listar figurinhas ativas, então normaliza a busca")
+    void givenActiveAlbumAndQueryWithSpaces_whenListActiveStickers_thenTrimsQuery() {
+        // Arrange
+        Pageable pageable = PageRequest.of(0, 10);
+        when(albumRepo.findByIdAndActive(albumId, true)).thenReturn(Optional.of(album));
+        when(stickerRepo.searchActiveStickers(albumId, "S1", pageable))
+                .thenReturn(new PageImpl<>(List.of(sticker), pageable, 1));
+        when(mapper.toStickerResponse(sticker)).thenReturn(mock(StickerResponse.class));
+
+        // Act
+        Page<StickerResponse> result = albumService.listActiveStickers(albumId, " S1 ", pageable);
+
+        // Assert
+        assertThat(result.getContent()).hasSize(1);
+        verify(stickerRepo).searchActiveStickers(albumId, "S1", pageable);
+    }
+
+    @Test
+    @DisplayName("dado álbum ativo e query em branco, quando listar figurinhas ativas, então busca sem filtro textual")
+    void givenActiveAlbumAndBlankQuery_whenListActiveStickers_thenSearchesWithoutTextFilter() {
+        // Arrange
+        Pageable pageable = PageRequest.of(0, 10);
+        when(albumRepo.findByIdAndActive(albumId, true)).thenReturn(Optional.of(album));
+        when(stickerRepo.searchActiveStickers(albumId, null, pageable))
+                .thenReturn(new PageImpl<>(List.of(sticker), pageable, 1));
+        when(mapper.toStickerResponse(sticker)).thenReturn(mock(StickerResponse.class));
+
+        // Act
+        Page<StickerResponse> result = albumService.listActiveStickers(albumId, "   ", pageable);
+
+        // Assert
+        assertThat(result.getContent()).hasSize(1);
+        verify(stickerRepo).searchActiveStickers(albumId, null, pageable);
+    }
+
+    @Test
     void updateSticker_WhenCodeExistsInOtherSticker_ThrowsException() {
         UpdateStickerRequest req = new UpdateStickerRequest("S2", "Updated", null);
         when(stickerRepo.findById(stickerId)).thenReturn(Optional.of(sticker));
@@ -131,6 +168,43 @@ class AlbumServiceTest {
 
         assertThatThrownBy(() -> albumService.updateSticker(stickerId, req))
                 .isInstanceOf(BusinessRuleException.class);
+    }
+
+    @Test
+    @DisplayName("dado código novo disponível, quando atualizar figurinha, então salva alterações")
+    void givenAvailableNewCode_whenUpdateSticker_thenSavesChanges() {
+        // Arrange
+        UpdateStickerRequest req = new UpdateStickerRequest("S2", "Updated", null);
+        when(stickerRepo.findById(stickerId)).thenReturn(Optional.of(sticker));
+        when(stickerRepo.existsByAlbumIdAndCodeAndIdNot(albumId, "S2", stickerId)).thenReturn(false);
+        when(stickerRepo.save(sticker)).thenReturn(sticker);
+        when(mapper.toStickerResponse(sticker)).thenReturn(mock(StickerResponse.class));
+
+        // Act
+        StickerResponse result = albumService.updateSticker(stickerId, req);
+
+        // Assert
+        assertThat(result).isNotNull();
+        verify(mapper).updateSticker(req, sticker);
+        verify(stickerRepo).save(sticker);
+    }
+
+    @Test
+    @DisplayName("dado request sem código, quando atualizar figurinha, então não valida duplicidade de código")
+    void givenNullCode_whenUpdateSticker_thenSkipsCodeDuplicationCheck() {
+        // Arrange
+        UpdateStickerRequest req = new UpdateStickerRequest(null, "Updated", null);
+        when(stickerRepo.findById(stickerId)).thenReturn(Optional.of(sticker));
+        when(stickerRepo.save(sticker)).thenReturn(sticker);
+        when(mapper.toStickerResponse(sticker)).thenReturn(mock(StickerResponse.class));
+
+        // Act
+        StickerResponse result = albumService.updateSticker(stickerId, req);
+
+        // Assert
+        assertThat(result).isNotNull();
+        verify(stickerRepo, never()).existsByAlbumIdAndCodeAndIdNot(any(), any(), any());
+        verify(mapper).updateSticker(req, sticker);
     }
 
     @Test
