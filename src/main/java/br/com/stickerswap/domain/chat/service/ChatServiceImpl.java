@@ -94,8 +94,9 @@ public class ChatServiceImpl implements ChatService {
 
         Map<UUID, Sticker> stickers = stickerRepo.findAllById(stickerIds).stream()
                 .collect(Collectors.toMap(Sticker::getId, s -> s));
-        Map<UUID, String> nicknames = profileRepo.findByUserIdIn(otherUserIds).stream()
-                .collect(Collectors.toMap(UserProfile::getUserId, UserProfile::getNickname));
+        Map<UUID, String> nicknames = new HashMap<>();
+        profileRepo.findByUserIdIn(otherUserIds)
+                .forEach(profile -> nicknames.put(profile.getUserId(), profile.getNickname()));
 
         return conversations.stream().map(c -> {
             UUID otherUserId = c.getUserAId().equals(userId) ? c.getUserBId() : c.getUserAId();

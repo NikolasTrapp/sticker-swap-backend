@@ -110,8 +110,9 @@ public class NotificationServiceImpl implements NotificationService {
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
 
-        Map<UUID, String> nicknames = profileRepo.findByUserIdIn(actorIds).stream()
-                .collect(Collectors.toMap(UserProfile::getUserId, UserProfile::getNickname));
+        Map<UUID, String> nicknames = new HashMap<>();
+        profileRepo.findByUserIdIn(actorIds)
+                .forEach(profile -> nicknames.put(profile.getUserId(), profile.getNickname()));
         Map<UUID, Sticker> stickers = stickerRepo.findAllById(stickerIds).stream()
                 .collect(Collectors.toMap(Sticker::getId, s -> s));
 

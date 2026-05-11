@@ -10,6 +10,7 @@ import br.com.stickerswap.infrastructure.repository.chat.ChatConversationReposit
 import br.com.stickerswap.infrastructure.repository.chat.ChatMessageRepository;
 import br.com.stickerswap.domain.moderation.service.ModerationService;
 import br.com.stickerswap.domain.notification.service.NotificationService;
+import br.com.stickerswap.domain.profile.model.UserProfile;
 import br.com.stickerswap.infrastructure.repository.profile.UserProfileRepository;
 import br.com.stickerswap.shared.error.BusinessRuleException;
 import br.com.stickerswap.shared.error.ResourceNotFoundException;
@@ -20,7 +21,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -125,6 +128,32 @@ class ChatServiceTest {
         assertThat(resp.conversationId()).isEqualTo(existing.getId());
         verify(conversationRepo, never()).save(any());
         verify(messageRepo, never()).save(any());
+    }
+
+    @Test
+    void listConversations_allowsProfileWithoutNickname() {
+        UUID userId = UUID.fromString("00000000-0000-0000-0000-000000000001");
+        UUID otherId = UUID.fromString("00000000-0000-0000-0000-000000000002");
+        UUID convId = UUID.randomUUID();
+
+        ChatConversation conv = new ChatConversation();
+        conv.setId(convId);
+        conv.setUserAId(userId);
+        conv.setUserBId(otherId);
+        conv.setStickerId(STICKER_ID);
+
+        UserProfile profile = UserProfile.forUser(otherId);
+        profile.setNickname(null);
+
+        when(conversationRepo.findAllForUser(userId)).thenReturn(List.of(conv));
+        when(stickerRepo.findAllById(Set.of(STICKER_ID))).thenReturn(List.of(sticker(STICKER_ID, "1", "Neymar")));
+        when(profileRepo.findByUserIdIn(Set.of(otherId))).thenReturn(List.of(profile));
+
+        List<ConversationResponse> response = chatService.listConversations(userId);
+
+        assertThat(response).hasSize(1);
+        assertThat(response.getFirst().otherUserId()).isEqualTo(otherId);
+        assertThat(response.getFirst().otherNickname()).isNull();
     }
 
     @Test
