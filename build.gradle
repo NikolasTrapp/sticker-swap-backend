@@ -198,7 +198,7 @@ check {
 
 sonar {
     properties {
-        property 'sonar.projectKey', 'nikolastrapp_sticker-swap-backend'
+        property 'sonar.projectKey', 'NikolasTrapp_sticker-swap-backend'
         property 'sonar.organization', 'nikolastrapp'
         property 'sonar.host.url', 'https://sonarcloud.io'
         property 'sonar.coverage.jacoco.xmlReportPaths', 'build/reports/jacoco/test/jacocoTestReport.xml'
