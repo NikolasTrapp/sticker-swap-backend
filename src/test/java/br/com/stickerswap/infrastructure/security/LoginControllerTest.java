@@ -10,10 +10,11 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import br.com.stickerswap.support.PostgresIntegrationTest;
 
 @SpringBootTest
 @AutoConfigureMockMvc(addFilters = false)
-class LoginControllerTest {
+class LoginControllerTest extends PostgresIntegrationTest {
 
     @Autowired MockMvc mockMvc;
     @Autowired AppProperties appProperties;

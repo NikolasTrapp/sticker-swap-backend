@@ -23,10 +23,11 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import br.com.stickerswap.support.PostgresIntegrationTest;
 
 @SpringBootTest
 @AutoConfigureMockMvc(addFilters = false)
-class AuthControllerTest {
+class AuthControllerTest extends PostgresIntegrationTest {
 
     @Autowired MockMvc mockMvc;
     @MockitoBean AuthService authService;

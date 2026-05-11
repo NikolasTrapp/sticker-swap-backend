@@ -25,10 +25,11 @@ import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import br.com.stickerswap.support.PostgresIntegrationTest;
 
 @SpringBootTest
 @AutoConfigureMockMvc(addFilters = false)
-class GlobalExceptionHandlerTest {
+class GlobalExceptionHandlerTest extends PostgresIntegrationTest {
 
     @Autowired MockMvc mockMvc;
 

@@ -19,10 +19,11 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import br.com.stickerswap.support.PostgresIntegrationTest;
 
 @SpringBootTest
 @AutoConfigureMockMvc(addFilters = false)
-class AdminUserControllerTest {
+class AdminUserControllerTest extends PostgresIntegrationTest {
 
     @Autowired private MockMvc mockMvc;
     @MockitoBean private AdminUserService adminUserService;
