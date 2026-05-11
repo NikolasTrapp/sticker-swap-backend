@@ -15,7 +15,7 @@ public class LoginController {
     @GetMapping("/login")
     public String loginPage(Model model) {
         String frontendLoginUrl = appProperties.security().frontendLoginUrl();
-        model.addAttribute("passwordResetUrl", appProperties.security().passwordResetUrl());
+        model.addAttribute("passwordResetUrl", frontendLoginUrl.replace("/login", "/password-reset-request"));
         model.addAttribute("registerUrl", frontendLoginUrl.replace("/login", "/register"));
         return "login";
     }

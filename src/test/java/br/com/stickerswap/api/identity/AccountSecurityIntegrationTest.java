@@ -26,6 +26,7 @@ import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -45,7 +46,8 @@ class AccountSecurityIntegrationTest extends PostgresIntegrationTest {
         String confirmationToken = registerUserAndCaptureConfirmation(email);
 
         mockMvc.perform(get("/auth/email-confirmations/confirm")
-                        .param("token", confirmationToken))
+                        .param("token", confirmationToken)
+                        .param("redirect", "false"))
                 .andExpect(status().isOk());
 
         MvcResult loginResult = mockMvc.perform(post("/login")
@@ -89,8 +91,14 @@ class AccountSecurityIntegrationTest extends PostgresIntegrationTest {
 
         mockMvc.perform(get("/auth/email-confirmations/confirm")
                         .param("token", confirmationToken.getValue()))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.emailVerified").value(true));
+                .andExpect(status().isFound())
+                .andExpect(redirectedUrl("http://localhost:4200/email-confirmed"));
+
+        emailVerified = jdbcTemplate.queryForObject(
+                "SELECT email_verified FROM users WHERE email = ?",
+                Boolean.class,
+                email);
+        assertThat(emailVerified).isTrue();
 
         Integer consumedTokens = jdbcTemplate.queryForObject(
                 """
@@ -107,12 +115,13 @@ class AccountSecurityIntegrationTest extends PostgresIntegrationTest {
     }
 
     @Test
-    void passwordReset_generatesTokenAndUpdatesPasswordHashWithoutExposingUnknownEmails() throws Exception {
+    void passwordReset_generatesTokenAndUpdatesPasswordHashOnlyForKnownEmails() throws Exception {
         String email = "reset-" + UUID.randomUUID() + "@example.com";
         String confirmationToken = registerUserAndCaptureConfirmation(email);
 
         mockMvc.perform(get("/auth/email-confirmations/confirm")
-                        .param("token", confirmationToken))
+                        .param("token", confirmationToken)
+                        .param("redirect", "false"))
                 .andExpect(status().isOk());
 
         String oldHash = jdbcTemplate.queryForObject(
@@ -163,7 +172,7 @@ class AccountSecurityIntegrationTest extends PostgresIntegrationTest {
                         .content("""
                                 {"email":"missing-%s@example.com"}
                                 """.formatted(UUID.randomUUID())))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isNotFound());
         verifyNoInteractions(accountEmailService);
     }
 

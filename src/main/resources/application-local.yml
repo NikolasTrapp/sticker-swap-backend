@@ -21,7 +21,7 @@ app:
       post-logout-redirect-uris: >-
         http://localhost:4200/logged-out,http://127.0.0.1:4200/logged-out
   mail:
-    from: no-reply@stickerswap.com
+    from: nikolastrapp@gmail.com
     delivery-mode: log
 
 logging:

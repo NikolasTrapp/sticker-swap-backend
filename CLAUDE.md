@@ -1,153 +1,139 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Instruções para trabalhar neste backend.
 
 ## Stack
 
-- Java 25, Spring Boot 4.0.4, Spring Framework 7.x
-- Gradle (use `./gradlew`, not system `gradle`)
-- PostgreSQL 16 (local via existing Docker container named `postgres`)
-- Flyway migrations in `src/main/resources/db/migration/`
-- springdoc-openapi 2.8.6 for Swagger UI
+- Java 25.
+- Spring Boot 4.0.4.
+- Gradle via `./gradlew`.
+- PostgreSQL com Flyway.
+- Spring Web MVC, JPA, Security, OAuth2/OIDC, Resource Server, WebSocket/STOMP, Validation, Mail, Thymeleaf e Actuator.
+- JUnit 5, Mockito, AssertJ e Testcontainers.
 
-## Common commands
+## Comandos
 
 ```bash
-# Build (compile only)
 ./gradlew compileJava
-
-# Run tests
+./gradlew compileTestJava
 ./gradlew test
-
-# Run application (requires Postgres running)
 ./gradlew bootRun
-
-# Package JAR
 ./gradlew bootJar
+./gradlew jibDockerBuild
 ```
 
-## Local database setup
+## Configuração
 
-The project uses the existing `postgres` Docker container (already running on port 5432). Create the database once:
+Profile padrão: `local`.
 
-```bash
-docker exec postgres psql -U postgres -c "CREATE USER stickerswap WITH PASSWORD 'stickerswap';"
-docker exec postgres psql -U postgres -c "CREATE DATABASE stickerswap OWNER stickerswap;"
-```
+Arquivos:
 
-Default `application.yml` connects to `localhost:5432/stickerswap` with user/pass `stickerswap`. Override via env vars `DB_URL`, `DB_USER`, `DB_PASSWORD`.
+- `src/main/resources/application.yml`
+- `src/main/resources/application-local.yml`
+- `src/main/resources/application-prod.yml`
+- `src/test/resources/application-test.yml`
 
-## Verification endpoints
+O local atual usa banco `stickerswap` em `localhost:5432` com usuário/senha `postgres/postgres`. O `docker-compose.yml` do backend cria `stickerswap/stickerswap`, então alinhe as credenciais se for usar esse compose.
 
-- `GET /actuator/health` — health check (public)
-- `GET /swagger-ui.html` — Swagger UI (public)
-- `GET /v3/api-docs` — OpenAPI JSON (public)
+## Arquitetura
 
-## Modular package structure
+Pacote raiz: `br.com.stickerswap`.
 
-Root package: `br.com.stickerswap`
+- `api`: controllers e DTOs.
+- `domain`: modelos e serviços.
+- `infrastructure`: segurança, repositórios, e-mail, config, seed e web.
+- `shared`: erros e contratos compartilhados.
 
-Modules (one package per domain, following the architecture in `../plano-implementacao-figurinhas-copa.md` §4.1):
+Controllers devem depender de interfaces de serviço quando houver contrato. Implementações usam sufixo `Impl`.
 
-| Package | Responsibility |
-|---|---|
-| `identity` | Authentication, authorization, users, roles |
-| `profile` | Nickname, city/state, private CEP, public flags |
-| `album` | Album and sticker catalog |
-| `collection` | User's repeated and wanted stickers |
-| `search` | Search and ranking of users by sticker |
-| `chat` | Conversations, messages, WebSocket |
-| `moderation` | Blocks and reports |
-| `admin` | Admin-only APIs |
-| `shared` | Error handling, security config, audit, utilities |
+## Segurança
 
-Modules communicate via service interfaces. Cross-module repository access is accepted within the monolith (e.g., `chat` accesses `StickerRepository` from `album`).
+- OAuth2/OIDC com Authorization Code + PKCE.
+- JWT RS256.
+- Resource Server em APIs protegidas.
+- Claims esperadas: `sub` como UUID do usuário, `email`, `role`.
+- `role` vira authority `ROLE_<role>`.
+- `USER` e `ADMIN` são as roles atuais.
+- `/admin/**` exige `ROLE_ADMIN`.
+- `ActiveUserFilter` exige usuário ativo e e-mail confirmado nas APIs protegidas.
+- `JwtChannelInterceptor` valida JWT em `STOMP CONNECT`.
+- `RateLimitingFilter` aplica limites de cadastro, confirmação, reset, token e APIs autenticadas.
 
-## Error format
+Não adicionar endpoint que gere access token manualmente.
 
-All errors follow `ApiError` in `shared/error/`:
+## Conta
 
-```json
-{
-  "timestamp": "...",
-  "status": 400,
-  "error": "Bad Request",
-  "message": "...",
-  "path": "/some/path",
-  "fieldErrors": [{"field": "email", "message": "must not be blank"}]
-}
-```
+Endpoints em `AuthController`:
 
-## Auth flow
+- `POST /auth/register`.
+- `POST /auth/email-confirmations`.
+- `GET /auth/email-confirmations/confirm?token=...`.
+- `GET /auth/email-confirmations/confirm?token=...&redirect=false`.
+- `POST /auth/password-reset-requests`.
+- `POST /auth/password-resets`.
 
-- `POST /auth/register` — `{"email","password"}` → 201 UserResponse
-- Browser SPA login uses Authorization Code + PKCE:
-  - `GET /oauth2/csrf` — returns CSRF token and sets `XSRF-TOKEN` cookie (handled by `OAuthBrowserAuthController`)
-  - `POST /oauth2/login` — `{"email","password"}` with `X-XSRF-TOKEN` header and `withCredentials`; creates the browser session only (204 No Content)
-  - `GET /oauth2/authorize` — browser redirect triggered by the SPA; requires the session established above
-  - Backend redirects to frontend `/oauth/callback?code=…`
-  - `POST /oauth2/token` exchanges the authorization code for tokens
-- Use `Authorization: Bearer <token>` in subsequent API requests.
-- Tokens are RS256 JWTs. Prefer `APP_SECURITY_JWK_SET_JSON` in production. If it is not set, the app loads or creates a private JWK Set at `APP_SECURITY_JWK_SET_JSON_FILE` (default `.local/jwk-set.json`); if that file path is disabled, startup generates an ephemeral RSA key and restart invalidates existing tokens.
-- Default admin: `admin@stickerswap.com` / `changeme` (override via `ADMIN_EMAIL`/`ADMIN_PASSWORD`)
-- JWT claims customized by `OAuthTokenCustomizerConfig`: `sub` = user UUID, `email`, `role`.
+O link de confirmação aberto no navegador redireciona para a tela frontend `email-confirmed`. A variante `redirect=false` retorna `UserResponse`.
 
-### OAuth2 client (seeder)
+Reset de senha revoga autorizações persistidas do usuário.
 
-`OAuthClientSeeder` runs on startup and registers `sticker-swap-web` in the `oauth2_registered_client` JDBC table. **It skips seeding if the client already exists.** If you need to change redirect URIs in an existing environment, delete the row first:
+## Admin
 
-```sql
-DELETE FROM oauth2_registered_client WHERE client_id = 'sticker-swap-web';
-```
+Admin de usuários:
 
-Then restart the app to re-seed with current config values.
+- `GET /admin/users`.
+- `PATCH /admin/users/{userId}/block`.
+- `PATCH /admin/users/{userId}/unblock`.
 
-### Security filter chains (in order)
+Bloqueio muda o usuário para `INACTIVE`, revoga autorizações persistidas e envia evento em `/user/queue/security`.
 
-| Order | Name | Matcher | Purpose |
-|---|---|---|---|
-| 1 | `authorizationServerFilterChain` | OAuth2 endpoints | Spring Authorization Server |
-| 2 | `loginFilterChain` | `/login`, `/logout`, `/oauth2/login`, `/oauth2/csrf` | Session-based credential exchange |
-| 3 | `apiFilterChain` | `/**` | Stateless JWT resource server |
+Admin de catálogo e moderação ficam em `AdminAlbumController` e `AdminModerationController`.
 
-### PKCE / origin consistency
+## E-mail
 
-The SPA's `redirect_uri` must match exactly a URI registered in `oauth2_registered_client`. The OIDC library stores the PKCE verifier keyed to the SPA's browser origin (`window.location.origin`). **If the SPA origin and the `redirect_uri` differ** (e.g. user accesses `127.0.0.1:4200` but `redirectUrl` is `localhost:4200`), the code-exchange fails silently at the callback. Ensure all origins you use during development are registered as redirect URIs.
+`MailProviderConfig` seleciona provider por `app.mail.delivery-mode`:
 
-### Database: OAuth2 JDBC tables
+- `log`.
+- `brevo`.
+- `resend`.
 
-Migration `V6` creates the three Spring Authorization Server JDBC tables:
+Profiles local e test usam `log`.
 
-- `oauth2_registered_client` — OAuth clients (populated by seeder)
-- `oauth2_authorization` — per-request authorization state and issued tokens
-- `oauth2_authorization_consent` — consent records
+## Tempo Real
 
-### Important backend env vars
+- Endpoint STOMP: `/ws`.
+- Chat recebe mensagens em `/app/chat/{conversationId}/send`.
+- Chat publica em `/topic/chat/{conversationId}`.
+- Notificações usam `/user/queue/notifications`.
+- Eventos de segurança usam `/user/queue/security`.
 
-- `APP_SECURITY_CORS_ALLOWED_ORIGINS` — comma-separated allowed origins (default: `localhost:4200,127.0.0.1:4200`)
-- `OAUTH_WEB_REDIRECT_URIS` — comma-separated redirect URIs for `sticker-swap-web` client
-- `OAUTH_WEB_POST_LOGOUT_REDIRECT_URIS` — post-logout redirect URIs
-- `APP_SECURITY_FRONTEND_LOGIN_URL` — URL of the SPA login page (used as auth entry point; default: `http://localhost:4200/login`)
-- `APP_PASSWORD_RESET_URL` — full URL of the SPA password-reset page
-- `APP_SECURITY_ISSUER` — OAuth2 issuer URL (must match what the SPA uses as `authority`)
+## Migrations
 
-## Role-based access
+Flyway usa `src/main/resources/db/migration`.
 
-- `ROLE_USER` — standard authenticated user
-- `ROLE_ADMIN` — admin user; required for `/admin/**` endpoints
-- JWT claim `role` → Spring Security `ROLE_<role>` authority
+Versões atuais: `V1` a `V9`, incluindo OAuth2 JDBC, figurinhas 2026, notificações e `last_ip_address`.
 
-## WebSocket (Chat)
+## Testes
 
-- STOMP endpoint: `/ws` (permitted in SecurityConfig, validated by `JwtChannelInterceptor`)
-- Send: `STOMP CONNECT` with `Authorization: Bearer <token>` header, then publish to `/app/chat/{conversationId}/send`
-- Subscribe: `/topic/chat/{conversationId}` for real-time messages
+Use `./gradlew test` para mudanças em segurança, auth, migrations, busca, chat, notificações ou contratos.
 
-## Implementation phases
+Testes de integração usam Testcontainers e profile `test`.
 
-See `../plano-implementacao-figurinhas-copa.md` §7 for the full 9-phase roadmap. **Fases 0-8 complete.** Fase 9 (AWS deploy) is next.
+## Erros
 
-## Known warnings
+Erros HTTP devem seguir `ApiError` e passar pelo `GlobalExceptionHandler`.
 
-- Lombok `sun.misc.Unsafe` deprecation on Java 25 — benign, does not affect compilation.
-- Mockito dynamic agent warning in tests — benign, tests pass normally.
+Use exceções existentes:
+
+- `BusinessRuleException`.
+- `ResourceNotFoundException`.
+- `EmailAlreadyExistsException`.
+- `RateLimitExceededException`.
+
+## Cuidados
+
+- Não expor CEP em perfil público.
+- Não permitir admin apenas por UI; backend deve exigir `ROLE_ADMIN`.
+- Não remover validação de conta ativa.
+- Não remover validação JWT no WebSocket.
+- Não enviar e-mail real em local/test.
+- Não assumir upload de imagem.

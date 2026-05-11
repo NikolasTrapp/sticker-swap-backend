@@ -1,129 +1,243 @@
 # AGENTS.md
 
-Instruções para agentes de IA trabalhando neste repositório.
+Instruções para agentes trabalhando no backend Sticker Swap.
 
-## Contexto Do Projeto
+## Fonte Da Verdade
 
-Este backend é uma plataforma de troca de figurinhas da Copa. O produto aproxima usuários para encontrar figurinhas repetidas, visualizar perfis públicos e iniciar conversas individuais com intenção de troca. O sistema não é marketplace: não processa pagamento, entrega, reserva de figurinha nem confirmação de troca física.
+Use o código atual como fonte de verdade. O plano e os requisitos na raiz do workspace ajudam a entender o produto, mas o comportamento vigente está nos controllers, serviços, migrations, testes e configurações deste repositório.
 
-O plano inicial está em `../plano-implementacao-figurinhas-copa.md` e os requisitos estão em `../requisitos-figurinhas-copa.md`. O estado atual já avançou além do MVP original em alguns pontos: confirmação de e-mail, recuperação de senha, rate limit, Spring Authorization Server e testes de integração com PostgreSQL/Testcontainers já foram implementados.
+## Produto
+
+Sticker Swap é uma plataforma para colecionadores encontrarem pessoas com figurinhas repetidas, compararem interesses e iniciarem conversas. O sistema não processa pagamento, entrega, reserva de figurinha nem confirmação de troca física.
 
 ## Stack
 
 - Java 25.
-- Spring Boot 4.0.4 / Spring Framework 7.x.
-- Gradle 9.5, preferencialmente via `./gradlew`.
-- Jib plugin para geração de imagem Docker (sem Dockerfile para CI; Dockerfile disponível para builds manuais).
-- PostgreSQL 16 para local/testes.
-- Flyway em `src/main/resources/db/migration/` (cópia em `src/test/resources/db/migration/` para testes).
-- Spring Security + Spring Authorization Server + Resource Server no mesmo deploy.
-- Spring Web MVC, Spring WebSocket, Spring Data JPA, Hibernate, Jakarta Validation.
-- springdoc-openapi para Swagger/OpenAPI.
+- Spring Boot 4.0.4 / Spring Framework 7.
+- Gradle 9.5 via `./gradlew`.
+- PostgreSQL.
+- Flyway em `src/main/resources/db/migration`.
+- Spring Web MVC, Spring Data JPA, Spring Security, OAuth2/OIDC, Resource Server, WebSocket/STOMP, Validation, Thymeleaf e Actuator.
+- Micrometer tracing com Brave.
+- springdoc-openapi para Swagger UI.
+- Jib e Dockerfile para imagem.
 - JUnit 5, Mockito, AssertJ e Testcontainers.
 
-## Comandos Úteis
+## Comandos
 
 ```bash
-./gradlew compileJava          # compilar
-./gradlew test                 # rodar todos os testes
-./gradlew bootRun              # subir localmente
-./gradlew bootJar              # gerar fat JAR em build/libs/
-./gradlew jibDockerBuild       # gerar imagem Docker local via Jib
-./gradlew jib                  # build + push para registry via Jib
-docker build -t sticker-swap . # build via Dockerfile (multi-stage)
+./gradlew compileJava
+./gradlew test
+./gradlew bootRun
+./gradlew bootJar
+./gradlew jibDockerBuild
+./gradlew jib
+docker build -t sticker-swap-backend .
 ```
 
-Para validação completa, rode `./gradlew test`. Os testes de integração usam Testcontainers e exigem Docker disponível.
+Use `./gradlew`, não `gradle` global.
+
+## Configuração Local
+
+O profile padrão é `local`.
+
+Arquivos:
+
+- `src/main/resources/application.yml`: configuração base.
+- `src/main/resources/application-local.yml`: defaults locais.
+- `src/main/resources/application-prod.yml`: variáveis de produção.
+- `src/test/resources/application-test.yml`: profile de testes.
+
+O `application-local.yml` atual aponta para `jdbc:postgresql://localhost:5432/stickerswap` com usuário `postgres` e senha `postgres`. O `docker-compose.yml` do backend cria usuário `stickerswap` e senha `stickerswap`; alinhe credenciais por variável de ambiente ou ajuste o banco local antes de rodar.
+
+## Variáveis Relevantes
+
+- `DB_URL`, `DB_USER`, `DB_PASSWORD`.
+- `ADMIN_EMAIL`, `ADMIN_PASSWORD`.
+- `APP_SECURITY_ISSUER`.
+- `APP_PUBLIC_BASE_URL`.
+- `APP_PASSWORD_RESET_URL`.
+- `APP_SECURITY_FRONTEND_LOGIN_URL`.
+- `APP_SECURITY_JWK_SET_JSON`.
+- `APP_SECURITY_CORS_ALLOWED_ORIGINS`.
+- `OAUTH_WEB_REDIRECT_URIS`.
+- `OAUTH_WEB_POST_LOGOUT_REDIRECT_URIS`.
+- `APP_MAIL_FROM`, `APP_MAIL_DELIVERY_MODE`, `APP_MAIL_API_KEY`.
+- `CEP_API_BASE_URL`, `CEP_API_CONNECT_TIMEOUT`, `CEP_API_READ_TIMEOUT`.
 
 ## Arquitetura
 
-O projeto é um monolito modular no pacote raiz `br.com.stickerswap`.
+Pacote raiz: `br.com.stickerswap`.
 
-Pacotes principais:
+Áreas principais:
 
-- `identity`: usuários, roles, cadastro, confirmação de e-mail, reset de senha.
-- `profile`: perfil próprio e perfil público.
+- `api`: controllers e DTOs.
+- `domain`: modelos e serviços de domínio.
+- `infrastructure`: configuração, repositórios, segurança, e-mail, seed, logging e web.
+- `shared`: erros, segurança e contratos compartilhados.
+
+Domínios:
+
+- `identity`: usuários, roles, status, confirmação de e-mail, reset de senha e administração de contas.
+- `profile`: perfil próprio, perfil público e CEP.
 - `album`: álbuns e figurinhas.
-- `collection`: figurinhas repetidas e desejadas do usuário.
-- `search`: busca de usuários por figurinha.
+- `collection`: figurinhas repetidas e desejadas.
+- `search`: busca de colecionadores por figurinha.
 - `chat`: conversas, mensagens e WebSocket.
+- `notification`: notificações.
 - `moderation`: bloqueios e denúncias.
-- `shared`: segurança, erros, OpenAPI, filtros e utilitários comuns.
 
-Padrão atual de serviços:
+Controllers devem depender de interfaces de serviço quando houver contrato. Implementações concretas usam sufixo `Impl`.
 
-- Controllers e outros módulos devem depender de interfaces, por exemplo `AlbumService`, `AuthService`, `SearchService`.
-- Implementações concretas devem usar o sufixo `Impl`, por exemplo `AlbumServiceImpl`, `AuthServiceImpl`, `SearchServiceImpl`.
-- Testes unitários podem instanciar/injetar a implementação concreta para verificar comportamento interno.
-- Evite acoplar controllers, filtros ou handlers a classes concretas quando houver contrato.
-- Cross-module repository access existe em alguns pontos do monolito, mas prefira atravessar módulos por interfaces de serviço quando isso reduzir acoplamento.
+## Autenticação E Segurança
 
-## Autenticação E Autorização
-
-Não reintroduza geração manual de access tokens para login.
-
-O fluxo atual usa Spring Authorization Server:
-
-- `/login`: form login do Spring Security usado pelo Authorization Server.
-- `/oauth2/authorize`: authorization endpoint.
-- `/oauth2/token`: token endpoint.
-- `/oauth2/jwks`: JWK Set.
-- `/.well-known/oauth-authorization-server`: metadata do authorization server.
-- Tokens são RS256. Preferencialmente configure `APP_SECURITY_JWK_SET_JSON` em produção; sem ele, a chave privada é carregada/criada em `APP_SECURITY_JWK_SET_JSON_FILE` (padrão `.local/jwk-set.json`).
-
-O Resource Server valida JWTs emitidos pelo Authorization Server. O claim `role` é convertido para authority `ROLE_<role>`.
+- OAuth2/OIDC com Authorization Code + PKCE.
+- JWT RS256.
+- Resource Server valida bearer tokens.
+- Claim `role` vira authority `ROLE_<role>`.
+- Claim `sub` é o UUID do usuário.
+- Claims esperadas no token: `sub`, `email`, `role`.
+- `OAuthClientSeeder` registra/atualiza o client público `sticker-swap-web`.
+- Scopes atuais: `openid`, `profile`, `api`, `offline_access`.
+- Redirect URIs vêm de `app.oauth.web-client.redirect-uris`.
+- Post-logout URIs vêm de `app.oauth.web-client.post-logout-redirect-uris`.
+- `ActiveUserFilter` bloqueia APIs protegidas para usuário inativo ou e-mail não confirmado.
+- `RateLimitingFilter` aplica limites por IP, client ou usuário.
 
 Roles:
 
 - `USER`: usuário comum.
 - `ADMIN`: administrador.
 
-Regra de acesso:
+Regras:
 
 - `/admin/**` exige `ROLE_ADMIN`.
-- Endpoints públicos estão definidos em `SecurityConfig.PUBLIC_PATHS`.
-- WebSocket `/ws/**` é permitido no HTTP, mas o STOMP `CONNECT` é validado por `JwtChannelInterceptor`.
+- `/actuator/**`, exceto health/info públicos, exige `ROLE_ADMIN`.
+- `/ws/**` é liberado no HTTP, mas o STOMP `CONNECT` é validado por `JwtChannelInterceptor`.
 
-Cliente OAuth local:
+Não adicione endpoint que emita JWT manualmente.
 
-- `OAuthClientSeeder` cria o client público `sticker-swap-web`.
-- O client usa Authorization Code + PKCE.
-- Scopes atuais: `openid`, `profile`, `api`.
-- Redirect URIs vêm de `app.oauth.web-client.redirect-uris`.
+## Conta, E-mail E Senha
 
-Admin local:
-
-- `AdminSeeder` cria `admin@stickerswap.com` / `changeme`, configurável por `ADMIN_EMAIL` e `ADMIN_PASSWORD`.
-
-## Cadastro, E-mail E Senha
-
-Endpoints próprios de conta ficam em `AuthController`:
+Endpoints de conta em `AuthController`:
 
 - `POST /auth/register`.
 - `POST /auth/email-confirmations`.
 - `GET /auth/email-confirmations/confirm?token=...`.
+- `GET /auth/email-confirmations/confirm?token=...&redirect=false`.
 - `POST /auth/password-reset-requests`.
 - `POST /auth/password-resets`.
 
-Esses endpoints não emitem access token. Eles cuidam somente de criação de conta, confirmação de e-mail e reset de senha.
+Confirmação de e-mail:
 
-Tokens de confirmação/reset usam `SecurityTokenService` e a tabela `security_tokens`. Esses tokens são tokens de segurança de conta, não OAuth access tokens.
+- O link aberto no navegador confirma a conta e redireciona para a tela frontend `email-confirmed`.
+- A variante `redirect=false` retorna `UserResponse`.
 
-Ao resetar senha, `AuthServiceImpl` revoga autorizações OAuth existentes removendo registros de `oauth2_authorization` daquele principal.
+Tokens de confirmação/reset usam `SecurityTokenService` e tabela `security_tokens`. Eles não são tokens OAuth.
 
-Em ambientes local e de teste, não envie e-mail real. O profile `test` (`src/test/resources/application-test.yml`) e o profile `local` (`src/main/resources/application-local.yml`) definem:
+Reset de senha consome tokens abertos de reset e remove autorizações persistidas do usuário em `oauth2_authorization`.
 
-```yaml
-app:
-  mail:
-    delivery-mode: log
-```
+## E-mail
 
-Com isso, `AccountEmailServiceImpl` escreve o conteúdo em log DEBUG.
+Contrato: `MailProvider`.
+
+Implementações:
+
+- `log`: escreve o e-mail em log.
+- `brevo`: usa `https://api.brevo.com/v3/smtp/email`.
+- `resend`: usa `https://api.resend.com/emails`.
+
+Seleção por `app.mail.delivery-mode`.
+
+Profiles `local` e `test` usam `log` no estado atual.
+
+## Admin De Usuários
+
+`AdminUserController` expõe:
+
+- `GET /admin/users?q=&page=&size=&sort=`.
+- `PATCH /admin/users/{userId}/block`.
+- `PATCH /admin/users/{userId}/unblock`.
+
+Bloqueio:
+
+- impede auto-bloqueio administrativo;
+- muda status para `INACTIVE`;
+- remove autorizações persistidas;
+- publica `UserAccessRevokedEvent`;
+- notifica o usuário por `/user/queue/security`.
+
+Desbloqueio muda status para `ACTIVE`; o usuário precisa entrar novamente.
+
+## Endpoints De Domínio
+
+Catálogo:
+
+- `GET /albums`.
+- `GET /albums/{albumId}`.
+- `GET /albums/{albumId}/stickers`.
+
+Admin de catálogo:
+
+- `POST /admin/albums`.
+- `PUT /admin/albums/{albumId}`.
+- `PATCH /admin/albums/{albumId}/activate`.
+- `PATCH /admin/albums/{albumId}/deactivate`.
+- `POST /admin/albums/{albumId}/stickers`.
+- `GET /admin/albums/{albumId}/stickers`.
+- `PUT /admin/stickers/{stickerId}`.
+- `PATCH /admin/stickers/{stickerId}/activate`.
+- `PATCH /admin/stickers/{stickerId}/deactivate`.
+
+Perfil:
+
+- `GET /me/profile`.
+- `PUT /me/profile`.
+- `GET /users/{userId}/profile`.
+- `GET /ceps/{cep}`.
+
+Coleção:
+
+- `GET /me/albums/{albumId}/collection`.
+- `GET /me/albums/{albumId}/repeated-stickers`.
+- `PUT /me/repeated-stickers/{stickerId}`.
+- `DELETE /me/repeated-stickers/{stickerId}`.
+- `GET /me/albums/{albumId}/wanted-stickers`.
+- `PUT /me/wanted-stickers/{stickerId}`.
+- `DELETE /me/wanted-stickers/{stickerId}`.
+
+Busca:
+
+- `GET /albums/{albumId}/stickers/{stickerId}/holders`.
+
+Chat:
+
+- `POST /stickers/{stickerId}/interest`.
+- `GET /chats`.
+- `GET /chats/{conversationId}/messages`.
+- STOMP `/app/chat/{conversationId}/send`.
+- Tópico `/topic/chat/{conversationId}`.
+
+Notificações:
+
+- `GET /notifications`.
+- `GET /notifications/unread-count`.
+- `PUT /notifications/{notificationId}/read`.
+- `PUT /notifications/read-all`.
+- `PUT /chats/{conversationId}/notifications/read`.
+- Fila `/user/queue/notifications`.
+
+Moderação:
+
+- `PUT /users/{userId}/block`.
+- `DELETE /users/{userId}/block`.
+- `GET /me/blocked-users`.
+- `POST /users/{userId}/report`.
+- `GET /admin/moderation/reports`.
 
 ## Rate Limit
 
-O rate limit atual fica em:
+Implementação atual:
 
 - `RateLimitingFilter`.
 - `RateLimiterService`.
@@ -138,11 +252,11 @@ Limites atuais:
 - `POST /oauth2/token`: 30 por IP/client por minuto.
 - APIs autenticadas: 300 por usuário por minuto.
 
-Para produção horizontal, substitua a implementação in-memory por Redis ou outro backend distribuído mantendo o contrato `RateLimiterService`.
+Para produção horizontal, substitua a implementação in-memory mantendo o contrato `RateLimiterService`.
 
 ## Flyway
 
-As migrations foram reorganizadas antes de produção e estão separadas por fluxo:
+Migrations atuais:
 
 - `V1__identity_accounts_and_profiles.sql`.
 - `V2__catalog_albums_and_stickers.sql`.
@@ -150,68 +264,17 @@ As migrations foram reorganizadas antes de produção e estão separadas por flu
 - `V4__chat.sql`.
 - `V5__moderation.sql`.
 - `V6__oauth2_authorization_server.sql`.
+- `V7__create_2026_stickers.sql`.
+- `V8__notifications.sql`.
+- `V9__user_last_ip_address.sql`.
 
-Como o sistema ainda não foi para produção, é aceitável ajustar essas migrations existentes para manter uma baseline limpa e organizada. Evite criar scripts só com `ALTER TABLE` para corrigir decisões recentes enquanto ainda não houver produção.
+Não há cópia de migrations em `src/test/resources/db/migration` no estado atual; os testes usam `classpath:db/migration`.
 
-Depois que houver produção, trate migrations como imutáveis e crie somente novas versões incrementais.
-
-## Endpoints De Domínio
-
-Catálogo público:
-
-- `GET /albums`.
-- `GET /albums/{albumId}`.
-- `GET /albums/{albumId}/stickers`.
-
-Admin de catálogo:
-
-- `POST /admin/albums`.
-- `PUT /admin/albums/{albumId}`.
-- `PATCH /admin/albums/{albumId}/activate`.
-- `PATCH /admin/albums/{albumId}/deactivate`.
-- `POST /admin/albums/{albumId}/stickers`.
-- `PUT /admin/stickers/{stickerId}`.
-- `PATCH /admin/stickers/{stickerId}/activate`.
-- `PATCH /admin/stickers/{stickerId}/deactivate`.
-
-Não há endpoint administrativo para excluir usuário. Também não há upload de imagem implementado. A entidade `Sticker` possui `imageUrl`, mas os DTOs atuais de criação/edição/resposta não expõem upload nem imagem.
-
-Coleção:
-
-- `GET /me/albums/{albumId}/repeated-stickers`.
-- `PUT /me/repeated-stickers/{stickerId}`.
-- `DELETE /me/repeated-stickers/{stickerId}`.
-- `GET /me/albums/{albumId}/wanted-stickers`.
-- `PUT /me/wanted-stickers/{stickerId}`.
-- `DELETE /me/wanted-stickers/{stickerId}`.
-
-Busca:
-
-- `GET /albums/{albumId}/stickers/{stickerId}/holders`.
-
-Perfil:
-
-- `GET /me/profile`.
-- `PUT /me/profile`.
-- `GET /users/{userId}/profile`.
-
-Chat:
-
-- `POST /stickers/{stickerId}/interest`.
-- `GET /chats`.
-- `GET /chats/{conversationId}/messages`.
-- WebSocket STOMP em `/ws`.
-
-Moderação:
-
-- `PUT /users/{userId}/block`.
-- `DELETE /users/{userId}/block`.
-- `POST /users/{userId}/report`.
-- `GET /admin/moderation/reports`.
+Antes de produção, a baseline ainda pode ser ajustada com cuidado. Depois de produção, trate migrations como imutáveis.
 
 ## Erros
 
-Erros devem seguir `ApiError` em `shared/error`:
+Formato padrão: `ApiError`.
 
 ```json
 {
@@ -224,7 +287,7 @@ Erros devem seguir `ApiError` em `shared/error`:
 }
 ```
 
-Use exceções de domínio existentes quando fizer sentido:
+Use exceções existentes quando aplicável:
 
 - `BusinessRuleException`.
 - `ResourceNotFoundException`.
@@ -233,60 +296,55 @@ Use exceções de domínio existentes quando fizer sentido:
 
 ## Testes
 
-Testes existentes:
+Testes existentes cobrem:
 
-- Unitários de serviços com Mockito.
-- Integração de segurança de conta em `AccountSecurityIntegrationTest`.
-- Integração OAuth/Flyway em `OAuthAndSchemaIntegrationTest`.
-- Integração de busca com PostgreSQL real em `SearchFlowIntegrationTest`.
-- Base Testcontainers em `PostgresIntegrationTest` (usa `@ActiveProfiles("test")`).
-- Configurações de teste em `src/test/resources/application-test.yml` (Testcontainers reuse, mail log, logging, etc.).
-- Migrations de teste em `src/test/resources/db/migration/` (cópia sincronizada das migrations principais).
+- Segurança de conta em `AccountSecurityIntegrationTest`.
+- OAuth/Flyway/JWK em `OAuthAndSchemaIntegrationTest`.
+- Busca com PostgreSQL real em `SearchFlowIntegrationTest`.
+- Serviços de chat, coleção, moderação, perfil, busca, auth e admin.
+- Rate limiter e JWT.
 
-Ao alterar queries, migrations, segurança, auth, busca ou fluxos principais, rode a suíte completa com Docker ativo:
+Base Testcontainers: `PostgresIntegrationTest`.
+
+Ao alterar segurança, auth, migrations, busca, chat, notificações ou contratos principais:
 
 ```bash
 ./gradlew test
 ```
 
-Para mudanças pequenas de contrato/compilação:
+Para validações menores:
 
 ```bash
+./gradlew compileJava
 ./gradlew compileTestJava
 ```
 
-## Cuidados Importantes
+## Cuidados
 
-- Não adicionar endpoint `/auth/login` que gere JWT manualmente.
-- Não bypassar Spring Authorization Server para emitir access tokens.
-- Não expor CEP ou e-mail em perfil público.
+- Não emitir JWT manualmente.
 - Não permitir `/admin/**` sem `ROLE_ADMIN`.
-- Não transformar reset/confirm token em token OAuth.
+- Não expor CEP em perfil público.
+- Não transformar token de confirmação/reset em token OAuth.
 - Não enviar e-mail real nos profiles `local` e `test`.
-- Não usar `@ActiveProfiles("local")` em testes; testes devem usar o profile `test`.
-- Ao criar novas migrations, copiar o arquivo para `src/test/resources/db/migration/` também.
-- Não remover Testcontainers dos testes de integração.
-- Não acoplar novos controllers diretamente a implementações `*ServiceImpl`.
-- Não fazer delete físico de álbuns/figurinhas se houver vínculo de usuário; use ativação/desativação.
-- Não assumir que upload de imagem já existe.
+- Não usar `@ActiveProfiles("local")` em teste.
+- Não remover a validação de usuário ativo/e-mail confirmado nas APIs protegidas.
+- Não remover a validação JWT do STOMP `CONNECT`.
+- Não fazer delete físico de álbuns/figurinhas com vínculo de usuário; use ativação/desativação.
+- Não assumir que upload de imagem existe.
 
-## Docker E Deploy
+## Deploy
 
-Duas opções para gerar a imagem Docker:
+Jib:
 
-1. **Jib (recomendado para CI)**: `./gradlew jibDockerBuild` gera imagem sem Docker daemon. `./gradlew jib` faz build + push para registry.
-2. **Dockerfile (multi-stage)**: `docker build -t sticker-swap-backend .` usa JDK para build e JRE-alpine para runtime.
+```bash
+./gradlew jibDockerBuild
+./gradlew jib
+```
 
-Flags JVM nos dois caminhos:
+Dockerfile:
 
-- `-XX:+UseContainerSupport`: respeita limites de CPU/memória do container.
-- `-XX:MaxRAMPercentage=75.0`: usa até 75% da RAM do container para heap.
-- `-Djava.security.egd=file:/dev/./urandom`: startup mais rápido.
+```bash
+docker build -t sticker-swap-backend .
+```
 
-Para EC2 spot: a aplicação é stateless (exceto WebSocket), então basta um healthcheck em `/actuator/health` e um balanceador que drene conexões antes de terminar a instância.
-
-## Warnings Conhecidos
-
-- Lombok em Java 25 emite warning de `sun.misc.Unsafe`; atualmente é benigno.
-- Mockito pode emitir warning de dynamic agent em Java recente; atualmente os testes passam.
-- Testcontainers pode avisar que reuse não está habilitado em `~/.testcontainers.properties`; isso não impede a suíte.
+A imagem expõe porta `8080` e usa profile `prod` no container Jib.

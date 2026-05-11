@@ -13,11 +13,19 @@ public class MailProviderConfig {
     @Bean
     public MailProvider mailProvider(AppProperties props) {
         String mode = props.mail().deliveryMode();
-        if ("log".equalsIgnoreCase(mode)) {
-            log.info("Mail provider: log");
-            return new LogMailProvider();
-        }
-        log.info("Mail provider: resend");
-        return new ResendMailProvider(props);
+        return switch (mode != null ? mode.toLowerCase() : "log") {
+            case "brevo" -> {
+                log.info("Mail provider: brevo");
+                yield new BrevoMailProvider(props);
+            }
+            case "resend" -> {
+                log.info("Mail provider: resend");
+                yield new ResendMailProvider(props);
+            }
+            default -> {
+                log.info("Mail provider: log");
+                yield new LogMailProvider();
+            }
+        };
     }
 }

@@ -5,12 +5,18 @@ import br.com.stickerswap.api.identity.dto.PasswordResetRequest;
 import br.com.stickerswap.api.identity.dto.RegisterRequest;
 import br.com.stickerswap.api.identity.dto.UserResponse;
 import br.com.stickerswap.domain.identity.service.AuthService;
+import br.com.stickerswap.infrastructure.config.AppProperties;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.util.UriComponentsBuilder;
+
+import java.net.URI;
 
 @RestController
 @RequestMapping("/auth")
@@ -19,6 +25,7 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
+    private final AppProperties appProperties;
 
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
@@ -34,10 +41,39 @@ public class AuthController {
         authService.resendEmailConfirmation(request.email());
     }
 
-    @GetMapping("/email-confirmations/confirm")
+    @GetMapping(value = "/email-confirmations/confirm", params = "redirect=false", produces = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Confirm a user email address")
-    public UserResponse confirmEmail(@RequestParam String token) {
+    public UserResponse confirmEmailApi(@RequestParam String token) {
         return UserResponse.from(authService.confirmEmail(token));
+    }
+
+    @GetMapping("/email-confirmations/confirm")
+    @Operation(summary = "Confirm a user email address and redirect to confirmation success page")
+    public ResponseEntity<Void> confirmEmail(@RequestParam String token) {
+        authService.confirmEmail(token);
+        return ResponseEntity.status(HttpStatus.FOUND).location(frontendEmailConfirmedUrl()).build();
+    }
+
+    private URI frontendEmailConfirmedUrl() {
+        URI loginUrl = URI.create(appProperties.security().frontendLoginUrl());
+        String path = loginUrl.getPath() == null ? "" : loginUrl.getPath();
+        String normalizedPath = path.endsWith("/") ? path.substring(0, path.length() - 1) : path;
+        String basePath = normalizedPath.endsWith("/login")
+                ? normalizedPath.substring(0, normalizedPath.length() - "/login".length())
+                : normalizedPath;
+
+        if (basePath.endsWith("/")) {
+            basePath = basePath.substring(0, basePath.length() - 1);
+        }
+
+        String targetPath = basePath + "/email-confirmed";
+        return UriComponentsBuilder
+                .fromUri(loginUrl)
+                .replacePath(targetPath)
+                .replaceQuery(null)
+                .fragment(null)
+                .build()
+                .toUri();
     }
 
     @PostMapping("/password-reset-requests")

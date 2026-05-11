@@ -9,6 +9,7 @@ import br.com.stickerswap.domain.identity.model.UserStatus;
 import br.com.stickerswap.infrastructure.repository.identity.UserRepository;
 import br.com.stickerswap.shared.error.EmailAlreadyExistsException;
 import br.com.stickerswap.infrastructure.security.RateLimiterService;
+import br.com.stickerswap.shared.error.ResourceNotFoundException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -108,6 +109,17 @@ class AuthServiceTest {
 
         verify(rateLimiterService).consume(eq("email:password-reset:user@example.com"), eq(3), any(Duration.class));
         verify(accountEmailService).sendPasswordReset("user@example.com", "reset-token");
+    }
+
+    @Test
+    void requestPasswordReset_throwsNotFound_whenEmailDoesNotExist() {
+        when(userRepository.findByEmail("missing@example.com")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> authService.requestPasswordReset("missing@example.com"))
+                .isInstanceOf(ResourceNotFoundException.class);
+
+        verify(rateLimiterService).consume(eq("email:password-reset:missing@example.com"), eq(3), any(Duration.class));
+        verifyNoInteractions(accountEmailService);
     }
 
     @Test

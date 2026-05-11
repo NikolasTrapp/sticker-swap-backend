@@ -9,6 +9,7 @@ import br.com.stickerswap.infrastructure.repository.identity.UserRepository;
 import br.com.stickerswap.shared.error.BusinessRuleException;
 import br.com.stickerswap.shared.error.EmailAlreadyExistsException;
 import br.com.stickerswap.infrastructure.security.RateLimiterService;
+import br.com.stickerswap.shared.error.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -94,13 +95,14 @@ public class AuthServiceImpl implements AuthService {
         String normalizedEmail = normalizeEmail(email);
         rateLimiterService.consume("email:password-reset:" + normalizedEmail, 3, Duration.ofHours(1));
 
-        userRepository.findByEmail(normalizedEmail)
-                .filter(user -> user.getStatus() == UserStatus.ACTIVE)
-                .ifPresent(user -> {
-                    String token = securityTokenService.createToken(user, SecurityTokenType.PASSWORD_RESET,
-                            PASSWORD_RESET_TTL);
-                    accountEmailService.sendPasswordReset(user.getEmail(), token);
-                });
+        User user = userRepository.findByEmail(normalizedEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("User", normalizedEmail));
+        if (user.getStatus() == UserStatus.INACTIVE) {
+            throw new BusinessRuleException("Account is inactive");
+        }
+
+        String token = securityTokenService.createToken(user, SecurityTokenType.PASSWORD_RESET, PASSWORD_RESET_TTL);
+        accountEmailService.sendPasswordReset(user.getEmail(), token);
     }
 
     @Transactional
