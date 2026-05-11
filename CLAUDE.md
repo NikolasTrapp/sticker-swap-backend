@@ -2,6 +2,14 @@
 
 Instruções para trabalhar neste backend.
 
+## Contexto de Negócio
+
+O Sticker Swap é uma plataforma para colecionadores de álbuns de figurinhas da Copa encontrarem outros usuários dispostos a trocar figurinhas repetidas ou desejadas.
+
+Fluxo central: o usuário cadastra quais figurinhas tem repetidas e quais deseja. Ao buscar uma figurinha, encontra perfis de quem a tem. Demonstra interesse e inicia um chat individual para combinar a troca. **A plataforma não controla a troca física** — ela apenas conecta as pessoas; a negociação e a execução acontecem fora do sistema.
+
+Atores: visitante (pode criar conta e fazer login), usuário autenticado (gerencia coleção, busca, chata, bloqueia, denuncia) e administrador (mantém catálogo de álbuns e figurinhas).
+
 ## Stack
 
 - Java 25.
