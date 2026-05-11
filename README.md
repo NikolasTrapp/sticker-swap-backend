@@ -175,3 +175,4 @@ docker build -t sticker-swap-backend .
 ```
 
 O container expõe `8080`. A configuração de produção deve vir por variáveis de ambiente.
+
