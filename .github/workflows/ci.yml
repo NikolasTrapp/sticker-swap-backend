@@ -10,8 +10,6 @@ on:
 
 permissions:
   contents: read
-  issues: write
-  pull-requests: write
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -22,11 +20,17 @@ jobs:
     name: Build, Test & Sonar
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: read
+      pull-requests: read
+      checks: write
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Set up Java 25
         uses: actions/setup-java@v4
@@ -37,191 +41,27 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Validate SonarCloud token
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: |
-          if [ -z "$SONAR_TOKEN" ]; then
-            echo "::error::SONAR_TOKEN is not configured in GitHub repository secrets."
-            exit 1
-          fi
-
       - name: Build, test and coverage
         run: ./gradlew --no-daemon check
 
-      - name: Analyze with SonarCloud
-        id: sonar
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: ./gradlew --no-daemon sonar
-
-      - name: Collect SonarCloud quality gate
-        id: sonar_gate
-        if: always() && steps.sonar.outcome == 'success'
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: |
-          set -euo pipefail
-
-          summary_file="sonar-summary.md"
-          report_task="build/sonar/report-task.txt"
-          echo "summary_file=$summary_file" >> "$GITHUB_OUTPUT"
-
-          write_failure_summary() {
-            local message="$1"
-            {
-              echo "### SonarCloud Quality Gate: ERROR"
-              echo
-              echo "$message"
-            } > "$summary_file"
-            cat "$summary_file" >> "$GITHUB_STEP_SUMMARY"
-            echo "status=ERROR" >> "$GITHUB_OUTPUT"
-            echo "failed=true" >> "$GITHUB_OUTPUT"
-          }
-
-          if [ ! -f "$report_task" ]; then
-            write_failure_summary "SonarCloud did not generate $report_task."
-            exit 0
-          fi
-
-          server_url="$(grep '^serverUrl=' "$report_task" | cut -d= -f2-)"
-          ce_task_id="$(grep '^ceTaskId=' "$report_task" | cut -d= -f2-)"
-          dashboard_url="$(grep '^dashboardUrl=' "$report_task" | cut -d= -f2-)"
-
-          if [ -z "$server_url" ] || [ -z "$ce_task_id" ]; then
-            write_failure_summary "SonarCloud report task metadata is incomplete."
-            exit 0
-          fi
-
-          analysis_id=""
-          task_status=""
-
-          for attempt in $(seq 1 60); do
-            if ! task_json="$(curl -fsS -u "$SONAR_TOKEN:" "$server_url/api/ce/task?id=$ce_task_id")"; then
-              write_failure_summary "Could not fetch SonarCloud background task status."
-              exit 0
-            fi
-
-            task_status="$(jq -r '.task.status' <<< "$task_json")"
-
-            if [ "$task_status" = "SUCCESS" ]; then
-              analysis_id="$(jq -r '.task.analysisId // empty' <<< "$task_json")"
-              break
-            fi
-
-            if [ "$task_status" = "FAILED" ] || [ "$task_status" = "CANCELED" ]; then
-              write_failure_summary "SonarCloud background task finished with status: $task_status."
-              exit 0
-            fi
-
-            sleep 5
-          done
-
-          if [ -z "$analysis_id" ]; then
-            write_failure_summary "SonarCloud quality gate was not available after waiting for the background task. Last status: ${task_status:-unknown}."
-            exit 0
-          fi
-
-          if ! gate_json="$(curl -fsS -u "$SONAR_TOKEN:" "$server_url/api/qualitygates/project_status?analysisId=$analysis_id")"; then
-            write_failure_summary "Could not fetch SonarCloud quality gate status."
-            exit 0
-          fi
-
-          status="$(jq -r '.projectStatus.status' <<< "$gate_json")"
-          echo "status=$status" >> "$GITHUB_OUTPUT"
-
-          if [ "$status" = "OK" ]; then
-            title="PASSED"
-            failed="false"
-          else
-            title="FAILED"
-            failed="true"
-          fi
-
-          echo "failed=$failed" >> "$GITHUB_OUTPUT"
-
-          {
-            echo "### SonarCloud Quality Gate: $title"
-            echo
-            if [ -n "$dashboard_url" ]; then
-              echo "[Open SonarCloud analysis]($dashboard_url)"
-              echo
-            fi
-            echo "| Metric | Status | Actual | Required |"
-            echo "| --- | --- | --- | --- |"
-            jq -r '
-              .projectStatus.conditions
-              | if length == 0 then
-                  "| No conditions returned | - | - | - |"
-                else
-                  .[]
-                  | "| `\(.metricKey)` | \(.status) | \(.actualValue // "-") | \(.comparator // "-") \(.errorThreshold // "-") |"
-                end
-            ' <<< "$gate_json"
-          } > "$summary_file"
-
-          cat "$summary_file" >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Comment SonarCloud report on PR
-        if: always() && github.event_name == 'pull_request' && steps.sonar_gate.outputs.summary_file != ''
-        continue-on-error: true
-        uses: actions/github-script@v8
-        with:
-          script: |
-            const fs = require('fs');
-
-            const marker = '<!-- sticker-swap-sonarcloud-quality-gate -->';
-            const summary = fs.readFileSync('${{ steps.sonar_gate.outputs.summary_file }}', 'utf8');
-            const body = `${marker}\n${summary}`;
-            const { owner, repo } = context.repo;
-            const issue_number = context.issue.number;
-
-            const { data: comments } = await github.rest.issues.listComments({
-              owner,
-              repo,
-              issue_number,
-              per_page: 100
-            });
-
-            const previous = comments.find((comment) =>
-              comment.user.type === 'Bot' && comment.body.includes(marker)
-            );
-
-            if (previous) {
-              await github.rest.issues.updateComment({
-                owner,
-                repo,
-                comment_id: previous.id,
-                body
-              });
-            } else {
-              await github.rest.issues.createComment({
-                owner,
-                repo,
-                issue_number,
-                body
-              });
-            }
-
-      - name: Fail on SonarCloud quality gate
-        if: always() && steps.sonar_gate.outputs.failed == 'true'
-        run: |
-          echo "::error::SonarCloud quality gate failed. See the job summary and SonarCloud analysis for details."
-          exit 1
-
       - name: Upload test report
-        if: failure()
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: test-report
           path: build/reports/tests/test/
           if-no-files-found: ignore
 
-      - name: Upload coverage report
-        if: failure()
+      - name: Upload JaCoCo report
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: jacoco-report
-          path: build/reports/jacoco/test/
+          path: build/reports/jacoco/test/html/
           if-no-files-found: ignore
+
+      - name: Analyze with SonarCloud
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: ./gradlew --no-daemon sonar

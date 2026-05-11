@@ -93,6 +93,11 @@ dependencies {
 // ── Test ───────────────────────────────────────────────────────
 tasks.withType(Test).configureEach {
     useJUnitPlatform()
+
+    testLogging {
+        events 'failed', 'skipped'
+        exceptionFormat 'full'
+    }
 }
 
 // ── Jib (Docker image) ────────────────────────────────────────
@@ -198,6 +203,8 @@ sonar {
         property 'sonar.host.url', 'https://sonarcloud.io'
         property 'sonar.coverage.jacoco.xmlReportPaths', 'build/reports/jacoco/test/jacocoTestReport.xml'
         property 'sonar.java.source', '25'
+        property 'sonar.qualitygate.wait', 'true'
+        property 'sonar.qualitygate.timeout', '300'
         property 'sonar.exclusions', [
             '**/StickerSwapBackendApplication.java',
             '**/mapper/*Impl.java'
